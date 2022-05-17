@@ -1,9 +1,9 @@
-const express = require('express');
+import express, { json } from 'express';
 const server = express();
-const { setRoutes } = require('./routes');
+import { setRoutes } from './routes';
 
-server.use(express.json());
+server.use(json());
 
 setRoutes(server);
 
-module.exports = { server };
+export default { server };
