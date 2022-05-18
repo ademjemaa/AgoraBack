@@ -11,7 +11,7 @@ const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219
 const cnx = "devnet";
 const tokenMintAddress = "BKuwa6ARkHGQMveboixqVfprvRUEZ163QfnLCbDMrMMQ";
 const node_wallet = new NodeWallet()
-const tokenreward = 0;
+let tokenreward = 0;
 
 const connection = new web3.Connection(web3.clusterApiUrl(cnx));
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
@@ -32,7 +32,6 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
 async function reward(){
   const user = await User.find({});
   console.log(user);
@@ -41,9 +40,20 @@ async function reward(){
     totalgems += user.gems.gemRarirtyTotal;
   console.log(totalgems);
   tokenreward = 2143347 / totalgems;
-  sleep(300000 / (user.length() * 10));
+  await sleep(300000);
   reward();
 };
+
+async function calculate(to){
+  const user = await User.findOne({wallet : to});
+  const now = new Date();
+  const time = now - user.lastStake;
+  const amount = tokenreward * user.gems.gemRarirtyTotal * time;
+  user.lastStake = now;
+  user.earned += amount;
+  user.total += amount;
+  await user.save();
+}
 
 async function transfer(to) {
   const user = await User.findOne({wallet : to});
