@@ -117,6 +117,7 @@ async function transfer(addr) {
         associatedDestinationTokenAddr,
         mint.address,
         fromWallet.publicKey,
+        [fromWallet]
       )
     )
   }
@@ -125,7 +126,8 @@ async function transfer(addr) {
       res.value[0].pubkey,
       associatedDestinationTokenAddr,
       fromWallet.publicKey,
-      amount
+      amount,
+      [fromWallet]
     )
   )
   instructions.push(
@@ -133,6 +135,7 @@ async function transfer(addr) {
       associatedDestinationTokenAddr,
       mint.address,
       fromWallet.publicKey,
+      [fromWallet]
     )
   )
 const transaction = new web3.Transaction().add(...instructions);
