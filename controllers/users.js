@@ -1,44 +1,39 @@
-import user from '../models/user.js';
+import User from "../models/user.js";
 
+export const getUsers = async (req, res) => {
+  try {
+    const user = await User.find();
 
-export const getUsers =  async (req, res) => {
-    try{
-        const _user = await user.find();
+    console.log(user);
 
-        console.log(_user);
-
-        res.status(200).json(_user);
-    }catch (error){
-        res.status(400).send('Error at getUsers');
-    }
-}
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(400).send("Error at getUsers");
+  }
+};
 
 export const getUser = async (req, res) => {
-    try {
-        const { wallet } = req.params;
-        console.log(wallet);
-        const _user = await user.findOne({wallet:wallet});
-
-        console.log(_user);
-
-        res.status(200).json(_user);
-
-    } catch (error) {
-        res.status(400).send('Error fetching User');
-    }
-}
-
-export const createUsers =  async (req, res) => {
+  try {
     const { wallet } = req.params;
-    const _user = req.body;
+    const user = await User.findOne({ wallet });
+    if (!user) throw new Error("User not found");
 
-    const newUser = new user(_user);
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+};
 
-    try{
-        await newUser.save();
+export const createUser = async (req, res) => {
+  const { wallet, vault, bank } = req.body;
 
-        res.status(201).json(newUser);
-    }catch{
-        res.status(409).json({message: error.message});
-    }
-}
+  try {
+    const user =
+      (await User.findOne({ wallet, vault, bank })) ||
+      (await User.create({ wallet, vault, bank }));
+
+    res.status(201).json(user);
+  } catch (error) {
+    res.status(409).json({ message: error.message });
+  }
+};
