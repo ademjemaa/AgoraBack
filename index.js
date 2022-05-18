@@ -15,7 +15,7 @@ app.use(cors());
 app.use("/users", userRoutes);
 app.use("/account", accRoutes);
 
-const CONNECTION_URL =
+const CONNECTION_URL = process.env.DBURL ||
   "mongodb+srv://Daraos:xSJbu0kArQHSApj5@cluster0.tgecm.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 
 const PORT = process.env.PORT || 5000;

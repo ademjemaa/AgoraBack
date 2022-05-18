@@ -2,7 +2,9 @@ import * as splToken from "@solana/spl-token";
 import * as web3 from "@solana/web3.js";
 import * as bs58 from "bs58";
 import { NodeWallet } from "@metaplex/js";
-import { getMint } from "@solana/spl-token";
+import pkg from '@solana/spl-token';
+const { getMint } = pkg;
+
 
 const DEMO_WALLET_SECRET_KEY = new Uint8Array([
   14, 14, 71, 205, 10, 210, 83, 32, 255, 219, 101, 238, 101, 69, 252, 218, 81,

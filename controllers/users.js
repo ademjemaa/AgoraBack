@@ -37,3 +37,39 @@ export const createUser = async (req, res) => {
     res.status(409).json({ message: error.message });
   }
 };
+
+export const updateUserGems = async (req, res) => {
+    const { wallet, gems } = req.body;
+
+    try {
+        const user = await User.findOne({wallet:wallet});
+        if(user.gems.gemCount == 0 ){
+            user.gems = gems;
+        }else{
+        user.gems.gemCount += gems.gemCount;
+        user.gems.gemRarirtyTotal += gems.gemRarirtyTotal;
+        user.gems.gemTypes.standard += gems.gemTypes.standard; 
+        user.gems.gemTypes.exclusif += gems.gemTypes.exclusif; 
+        user.gems.gemTypes.premium += gems.gemTypes.premium; 
+        }
+        await user.save();
+        if (!user) throw new Error("User not found");
+      res.status(201).json(user);
+    } catch (error) {
+        res.status(409).json({ message: error.message });
+    }
+
+    
+}
+
+export const getUserCurrentReward = async (req, res) => {
+    const { wallet } = req.body;
+
+    try {
+        const user = await User.findOne({wallet:wallet});
+        res.status(200).json(user);
+        if (!user) throw new Error("User not found");
+    } catch (error) {
+        res.status(409).json({ message: error.message });
+    }
+}
