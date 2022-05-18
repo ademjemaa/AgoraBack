@@ -25,12 +25,10 @@ export const getUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-  const { wallet, vault, bank } = req.body;
-
+  const { wallet, vault, bank, gems, earned, total, lastStake } = req.body;
   try {
-    const user =
       (await User.findOne({ wallet, vault, bank })) ||
-      (await User.create({ wallet, vault, bank }));
+      (await User.create({ wallet, vault, bank, gems, earned, total, lastStake }));
 
     res.status(201).json(user);
   } catch (error) {
@@ -50,7 +48,8 @@ export const updateUserGems = async (req, res) => {
         user.gems.gemRarirtyTotal += gems.gemRarirtyTotal;
         user.gems.gemTypes.standard += gems.gemTypes.standard; 
         user.gems.gemTypes.exclusif += gems.gemTypes.exclusif; 
-        user.gems.gemTypes.premium += gems.gemTypes.premium; 
+        user.gems.gemTypes.premium += gems.gemTypes.premium;
+        user.lastStake = new Date();
         }
         await user.save();
         if (!user) throw new Error("User not found");

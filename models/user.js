@@ -4,6 +4,9 @@ const userSchema = mongoose.Schema({
     wallet: String,
     bank: String,
     vault: String,
+    earned : Number,
+    total: Number,
+    lastStake : Date,
     gems : {
         gemCount: Number,
         gemRarirtyTotal: Number,
