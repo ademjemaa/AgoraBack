@@ -1,13 +1,22 @@
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { web3, Wallet } from "@project-serum/anchor";
-    const Wallet = require('../controllers/walletController').default;
-const solanaWeb3 = require('@solana/web3.js');
+import { web3 } from "@project-serum/anchor";
+import { Wallet } from "../controllers/walletController.js";
 
 
-const wallet = new Wallet();
-const connection = wallet.connection;
+const masterwallet = new Wallet();
+const connection = masterwallet.connection;
 
 const tokenMintAddress = "";
+
+export const PostTransaction =  async (req, res) => {
+  try{
+      console.log(req);
+
+      // res.status(200).json(postMessages);
+  }catch (error){
+      // res.status(400).send('Error at GetPosts');
+  }
+}
 
 async function transfer(to, amount) {
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
@@ -15,11 +24,11 @@ async function transfer(to, amount) {
     connection,
     mintPublicKey,
     TOKEN_PROGRAM_ID,
-    wallet.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
+    masterwallet.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
   );
         
   const fromTokenAccount = await mintToken.getOrCreateAssociatedAccountInfo(
-    wallet.publicKey
+    masterwallet.publicKey
   );
 
   const destPublicKey = new web3.PublicKey(to);
@@ -50,7 +59,7 @@ async function transfer(to, amount) {
         mintPublicKey,
         associatedDestinationTokenAddr,
         destPublicKey,
-        wallet.publicKey
+        masterwallet.publicKey
       )
     )
 
@@ -74,14 +83,14 @@ async function transfer(to, amount) {
       TOKEN_PROGRAM_ID,
       fromTokenAccount.address,
       associatedDestinationTokenAddr,
-      wallet.publicKey,
+      masterwallet.publicKey,
       [],
       amount
     )
   );
 
   const transaction = new web3.Transaction().add(...instructions);
-  transaction.feePayer = wallet.publicKey;
+  transaction.feePayer = masterwallet.publicKey;
   transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
   
   const transactionSignature = await connection.sendRawTransaction(
