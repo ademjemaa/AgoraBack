@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const config = require('./config')();
+import { connect as _connect } from 'mongoose';
+import config from './config';
 
 class Connection {
     constructor() {
@@ -14,7 +14,7 @@ class Connection {
 
     async connect(url) {
         try {
-            await mongoose.connect(url);
+            await _connect(url);
         }
 		catch (e) {
             throw e;
@@ -22,4 +22,4 @@ class Connection {
     }
 }
 
-module.exports = new Connection();
+export default new Connection();

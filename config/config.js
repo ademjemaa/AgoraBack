@@ -1,6 +1,6 @@
-const path = require( 'path' );
+import path from 'path';
 
-module.exports = () => {
+export default () => {
     const config = {
         'MODE': 'Development',
         'PORT': process.env.PORT || 5000,

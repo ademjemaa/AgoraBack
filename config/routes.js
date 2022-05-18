@@ -1,7 +1,7 @@
-const express = require('express');
-const path = require('path');
-const { HttpError } = require('../system/helpers/HttpError');
-const apiRoutes = require('../system/routes');
+import express from 'express';
+import path from 'path';
+import { HttpError } from '../system/helpers/HttpError';
+import apiRoutes from '../system/routes';
 
 setRoutes = (app) => {
 	app.use((req, res, next) => {
@@ -27,4 +27,4 @@ setRoutes = (app) => {
 	});
 }
 
-module.exports = { setRoutes };
+export default { setRoutes };
