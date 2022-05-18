@@ -32,18 +32,20 @@ export const getTrans =  async (req, res) => {
 
 export const getEarned =  async (req, res) => {
   try{
-      const { to } = req.body;
+      const { to } = req.params;
       const user = await User.findOne({ wallet:to });
       console.log(user);
-    const sign = await calculate(user);
-    res.status(200).send(sign.toString());
+    const [ sign, tokenreward,gemRarirtyTotal] = await calculate(user);
+    res.status(200).json({sign:sign.toString(),total:user.total,tokenReward:tokenreward,gemRarity:gemRarirtyTotal});
   }catch (error){
-      res.status(400).send('Error at calculate');
+      res.status(409).send('Error at calculate',error);
   }
 }
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+
 
 async function reward()
 {
@@ -69,7 +71,7 @@ async function calculate(user){
   user.earned += amount;
   console.log(user.earned);
   await user.save();
-  return (user.earned);
+  return [user.earned,tokenreward,user.gems.gemRarirtyTotal];
 }
 
 async function transfer(to) {

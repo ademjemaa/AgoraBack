@@ -6,6 +6,6 @@ import { getTrans, getEarned } from '../controllers/accounts.js';
 const router = express.Router();
 
 router.post('/', getTrans);
-router.get('/', getEarned);
+router.get('/:to', getEarned);
 
 export default router;
