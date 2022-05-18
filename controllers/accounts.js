@@ -2,7 +2,9 @@ import * as splToken from "@solana/spl-token";
 import * as web3 from "@solana/web3.js";
 import * as bs58 from 'bs58';
 import { NodeWallet } from '@metaplex/js';
-import { getMint } from "@solana/spl-token";
+import pkg from '@solana/spl-token';
+const { getMint } = pkg;
+
 import User from "../models/user.js";
 
 

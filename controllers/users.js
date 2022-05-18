@@ -37,20 +37,19 @@ export const createUser = async (req, res) => {
 };
 
 export const updateUserGems = async (req, res) => {
-    const { wallet, gems } = req.body;
+    const { wallet, gems, lastStake} = req.body;
 
     try {
         const user = await User.findOne({wallet:wallet});
-        if(user.gems.gemCount == 0 ){
-            user.gems = gems;
-        }else{
-        user.gems.gemCount += gems.gemCount;
-        user.gems.gemRarirtyTotal += gems.gemRarirtyTotal;
-        user.gems.gemTypes.standard += gems.gemTypes.standard; 
-        user.gems.gemTypes.exclusif += gems.gemTypes.exclusif; 
-        user.gems.gemTypes.premium += gems.gemTypes.premium;
-        user.lastStake = new Date();
-        }
+
+            user.lastStake = lastStake;
+            user.gems.gemCount += gems.gemCount;
+            user.gems.gemRarirtyTotal += gems.gemRarirtyTotal;
+            user.gems.gemTypes.standard += gems.gemTypes.standard; 
+            user.gems.gemTypes.exclusif += gems.gemTypes.exclusif; 
+            user.gems.gemTypes.premium += gems.gemTypes.premium;
+            user.lastStake = new Date();
+        
         await user.save();
         if (!user) throw new Error("User not found");
       res.status(201).json(user);
