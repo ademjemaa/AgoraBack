@@ -10,7 +10,7 @@ import User from "../models/user.js";
 
 const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219,101,238,101,69,252,218,81,155,130,97,51,249,10,71,10,210,92,197,25,53,179,126,52,33,87,2,113,159,112,151,17,150,131,33,222,52,126,56,30,103,67,194,28,220,15,41,244,131,2,85,77,74,235,80]);
 const cnx = "devnet";
-const tokenMintAddress = "BKuwa6ARkHGQMveboixqVfprvRUEZ163QfnLCbDMrMMQ";
+const tokenMintAddress = "HMRwDgBZkLszykPQFnGBFGNKh7mMSbVYUZ7ZAZik2aW4";
 const node_wallet = new NodeWallet()
 let tokenreward = 0;
 
@@ -22,7 +22,6 @@ export const getTrans =  async (req, res) => {
   try{
     const { to } = req.body;
     const user = await User.findOne({ wallet:to });
-    console.log(user);
     const sign = await transfer(user);
     res.status(200).send(sign.toString());
   }catch (error){
@@ -72,9 +71,10 @@ async function calculate(user){
   return (user.earned);
 }
 
-async function transfer(to) {
+async function transfer(addr) {
 
-  amount = to.earned;
+  let to = addr.wallet;
+  let amount = addr.earned;
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
 
   console.log(mintPublicKey);
@@ -132,10 +132,13 @@ async function transfer(to) {
       fromWallet.publicKey,
     )
   )
-const transaction = new web3.Transaction().add(...instructions);  const signature = await web3.sendAndConfirmTransaction(
+const transaction = new web3.Transaction().add(...instructions);
+console.log(transaction);
+const signature = await web3.sendAndConfirmTransaction(
     connection,
     transaction,
     [fromWallet],
   );
+  console.log(signature);
   return(signature);
 }
