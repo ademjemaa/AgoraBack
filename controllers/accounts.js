@@ -4,12 +4,13 @@ import * as bs58 from 'bs58';
 import { NodeWallet } from '@metaplex/js';
 import pkg from '@solana/spl-token';
 const { getMint } = pkg;
+
 import User from "../models/user.js";
 
 
 
 const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219,101,238,101,69,252,218,81,155,130,97,51,249,10,71,10,210,92,197,25,53,179,126,52,33,87,2,113,159,112,151,17,150,131,33,222,52,126,56,30,103,67,194,28,220,15,41,244,131,2,85,77,74,235,80]);
-const cnx = "devnet";
+const cnx = "mainnet-beta";
 const tokenMintAddress = "BKuwa6ARkHGQMveboixqVfprvRUEZ163QfnLCbDMrMMQ";
 const node_wallet = new NodeWallet()
 let tokenreward = 0;

@@ -1,4 +1,5 @@
 import User from "../models/user.js";
+import Wallet from "./walletController.js";
 
 export const getUsers = async (req, res) => {
   try {
