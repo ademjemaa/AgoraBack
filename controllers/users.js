@@ -13,6 +13,21 @@ export const getUsers =  async (req, res) => {
     }
 }
 
+export const getUser = async (req, res) => {
+    try {
+        const { wallet } = req.params;
+        console.log(wallet);
+        const _user = await user.findOne({wallet:wallet});
+
+        console.log(_user);
+
+        res.status(200).json(_user);
+
+    } catch (error) {
+        res.status(400).send('Error fetching User');
+    }
+}
+
 export const createUsers =  async (req, res) => {
     const { wallet } = req.params;
     const _user = req.body;

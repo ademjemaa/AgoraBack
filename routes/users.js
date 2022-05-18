@@ -1,10 +1,11 @@
 import express, { response } from 'express';
 
-import { getUsers, createUsers } from '../controllers/users.js';
+import { getUsers, createUsers, getUser } from '../controllers/users.js';
 
 const router = express.Router();
 
 router.get('/', getUsers);
-router.post('/create/:wallet', createUsers);
+router.post('/create/', createUsers);
+router.get('/specific/:wallet', getUser);
 
 export default router;
