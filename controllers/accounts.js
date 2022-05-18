@@ -4,7 +4,6 @@ import * as bs58 from 'bs58';
 import { NodeWallet } from '@metaplex/js';
 import pkg from '@solana/spl-token';
 const { getMint } = pkg;
-
 import User from "../models/user.js";
 
 
@@ -21,52 +20,61 @@ reward();
 
 export const getTrans =  async (req, res) => {
   try{
-      console.log(req.body);
-      const test = req.body;
-    const sig = await transfer(test.to);
-    res.status(200).send(sig.toString());
+    const { to } = req.body;
+    const user = await User.findOne({ wallet:to });
+    console.log(user);
+    const sign = await transfer(user);
+    res.status(200).send(sign.toString());
   }catch (error){
-      res.status(400).send('Error at getUsers');
+      res.status(400).send('Error at getTrans');
   }
 }
 
-function sleep(ms) {
+export const getEarned =  async (req, res) => {
+  try{
+      const { to } = req.body;
+      const user = await User.findOne({ wallet:to });
+      console.log(user);
+    const sign = await calculate(user);
+    res.status(200).send(sign.toString());
+  }catch (error){
+      res.status(400).send('Error at calculate');
+  }
+}
+async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function reward()
 {
-  const user = await User.find({});
+  let user;
+  while (user == undefined)
+    user = await User.find({});
   console.log(user);
   let totalgems = 0;
   for (let i = 0; i < user.length; i++)
     totalgems += user[i].gems.gemRarirtyTotal;
-  console.log(totalgems);
-  tokenreward = 2143347 / totalgems;
+  console.log("total gems : " + totalgems);
+  tokenreward = 2143347 / (totalgems + 1);
   await sleep(300000);
   reward();
 };
 
-async function calculate(to){
-  const user = await User.findOne({wallet : to});
-  const now = new Date();
-  const time = now - user.lastStake;
-  const amount = tokenreward * user.gems.gemRarirtyTotal * time;
+async function calculate(user){
+  console.log("inside calc"+user);
+  let now = new Date().getTime();
+  let time = now - user.lastStake.getTime();
+  let amount = tokenreward * user.gems.gemRarirtyTotal * time;
   user.lastStake = now;
   user.earned += amount;
-  user.total += amount;
+  console.log(user.earned);
   await user.save();
+  return (user.earned);
 }
 
 async function transfer(to) {
-  const user = await User.findOne({wallet : to});
-  const now = new Date();
-  const time = now - user.lastStake;
-  const amount = tokenreward * user.gems.gemRarirtyTotal * time;
-  user.lastStake = now;
-  user.earned = 0;
-  user.total += amount;
-  await user.save();
+
+  amount = to.earned;
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
 
   console.log(mintPublicKey);
@@ -114,7 +122,7 @@ async function transfer(to) {
       res.value[0].pubkey,
       associatedDestinationTokenAddr,
       fromWallet.publicKey,
-      1
+      amount
     )
   )
   instructions.push(
