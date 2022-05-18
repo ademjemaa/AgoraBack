@@ -32,12 +32,13 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function reward(){
+async function reward()
+{
   const user = await User.find({});
   console.log(user);
-  const totalgems = 0;
+  let totalgems = 0;
   for (let i = 0; i < user.length; i++)
-    totalgems += user.gems.gemRarirtyTotal;
+    totalgems += user[i].gems.gemRarirtyTotal;
   console.log(totalgems);
   tokenreward = 2143347 / totalgems;
   await sleep(300000);
