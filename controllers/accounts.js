@@ -1,6 +1,6 @@
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { web3, Wallet } from "@project-serum/anchor";
-    const Wallet = require('../controllers/walletController').default;
+import { web3 } from "@project-serum/anchor";
+const Wallet = require('../controllers/walletController').default;
 const solanaWeb3 = require('@solana/web3.js');
 
 
