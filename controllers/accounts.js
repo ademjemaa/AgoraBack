@@ -23,7 +23,6 @@ export const getTrans =  async (req, res) => {
   try{
     const { to } = req.body;
     const user = await User.findOne({ wallet:to });
-    console.log(user);
     const sign = await transfer(user);
     res.status(200).send(sign.toString());
   }catch (error){
@@ -75,9 +74,10 @@ async function calculate(user){
   return [user.earned,tokenreward,user.gems.gemRarirtyTotal];
 }
 
-async function transfer(to) {
+async function transfer(addr) {
 
-  amount = to.earned;
+  let to = addr.wallet;
+  let amount = addr.earned;
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
 
   console.log(mintPublicKey);
@@ -135,10 +135,13 @@ async function transfer(to) {
       fromWallet.publicKey,
     )
   )
-const transaction = new web3.Transaction().add(...instructions);  const signature = await web3.sendAndConfirmTransaction(
+const transaction = new web3.Transaction().add(...instructions);
+console.log(transaction);
+const signature = await web3.sendAndConfirmTransaction(
     connection,
     transaction,
     [fromWallet],
   );
+  console.log(signature);
   return(signature);
 }
