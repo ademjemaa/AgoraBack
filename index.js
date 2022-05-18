@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 
 import userRoutes from './routes/users.js';
+import accRoutes from './routes/transfer.js';
 
 const app = express();
 

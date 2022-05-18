@@ -1,13 +1,27 @@
-import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { web3 } from "@project-serum/anchor";
-const Wallet = require('../controllers/walletController').default;
-const solanaWeb3 = require('@solana/web3.js');
+import * as splToken from "@solana/spl-token";
+import * as web3 from "@solana/web3.js";
+import * as bs58 from 'bs58';
+import { NodeWallet } from '@metaplex/js';
+
+const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219,101,238,101,69,252,218,81,155,130,97,51,249,10,71,10,210,92,197,25,53,179,126,52,33,87,2,113,159,112,151,17,150,131,33,222,52,126,56,30,103,67,194,28,220,15,41,244,131,2,85,77,74,235,80]);
 
 
-const wallet = new Wallet();
-const connection = wallet.connection;
+const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
+var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
+//const secretKey = bs58.decode('5y3zwAFwLUk2agrQZ9CrLKo1Ehn4x8RjzwJbzePAjHAySRXJHFiNHz4xvWbCwRuLxZ664RWB74tVYyjxuPcDNGaq');
+// const kp = Keypair.fromSecretKey(secretKey);
+const wallet = web3.Keypair.generate();
 
 const tokenMintAddress = "";
+
+export const getTrans =  async (req, res) => {
+  try{
+      console.log(req);
+      res.status(200).json(req);
+  }catch (error){
+      res.status(400).send('Error at getUsers');
+  }
+}
 
 async function transfer(to, amount) {
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
