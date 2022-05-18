@@ -16,6 +16,7 @@ app.use(bodyParser.urlencoded({ limit:"30mb", extended:true}));
 app.use(cors());
 
 app.use('/users', userRoutes);
+app.use('/account', accRoutes);
 
 const CONNECTION_URL = "mongodb+srv://Daraos:xSJbu0kArQHSApj5@cluster0.tgecm.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 

@@ -2,106 +2,88 @@ import * as splToken from "@solana/spl-token";
 import * as web3 from "@solana/web3.js";
 import * as bs58 from 'bs58';
 import { NodeWallet } from '@metaplex/js';
+import { getMint } from "@solana/spl-token";
 
 const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219,101,238,101,69,252,218,81,155,130,97,51,249,10,71,10,210,92,197,25,53,179,126,52,33,87,2,113,159,112,151,17,150,131,33,222,52,126,56,30,103,67,194,28,220,15,41,244,131,2,85,77,74,235,80]);
 
 
 const connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
-//const secretKey = bs58.decode('5y3zwAFwLUk2agrQZ9CrLKo1Ehn4x8RjzwJbzePAjHAySRXJHFiNHz4xvWbCwRuLxZ664RWB74tVYyjxuPcDNGaq');
-// const kp = Keypair.fromSecretKey(secretKey);
-const wallet = web3.Keypair.generate();
 
-const tokenMintAddress = "";
+const tokenMintAddress = "BKuwa6ARkHGQMveboixqVfprvRUEZ163QfnLCbDMrMMQ";
 
 export const getTrans =  async (req, res) => {
   try{
-      console.log(req);
-      res.status(200).json(req);
+      console.log(req.body);
+      const test = req.body;
+     transfer(test.to, test.amount);
   }catch (error){
       res.status(400).send('Error at getUsers');
   }
 }
 
 async function transfer(to, amount) {
-  const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
-  const mintToken = new Token(
-    connection,
-    mintPublicKey,
-    TOKEN_PROGRAM_ID,
-    wallet.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
-  );
-        
-  const fromTokenAccount = await mintToken.getOrCreateAssociatedAccountInfo(
-    wallet.publicKey
-  );
+  const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
 
-  const destPublicKey = new web3.PublicKey(to);
+  console.log(mintPublicKey);
+  const mint = await getMint(connection, mintPublicKey, splToken.TOKEN_PROGRAM_ID);
+  console.log(mint);
 
-  // Get the derived address of the destination wallet which will hold the custom token
-  const associatedDestinationTokenAddr = await Token.getAssociatedTokenAddress(
-    mintToken.associatedProgramId,
-    mintToken.programId,
-    mintPublicKey,
-    destPublicKey
+  const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
+    mint : mint.address
+  })
+  console.log(res.value[0].pubkey.toString());
+  const associatedDestinationTokenAddr = await splToken.getAssociatedTokenAddress(
+    mint.address,
+    new web3.PublicKey(to)
   );
-
+  console.log(associatedDestinationTokenAddr.toString());
   const receiverAccount = await connection.getAccountInfo(associatedDestinationTokenAddr);
-
-  if (receiverAccount.isFrozen == true)
-  {
-
-  }
-        
-  const instructions = [];  
-
-  if (receiverAccount === null) {
-
+  console.log(receiverAccount);
+  const instructions = [];
+  if (receiverAccount == null)
     instructions.push(
-      Token.createAssociatedTokenAccountInstruction(
-        mintToken.associatedProgramId,
-        mintToken.programId,
-        mintPublicKey,
+      splToken.createAssociatedTokenAccountInstruction(
+        fromWallet.publicKey,
         associatedDestinationTokenAddr,
-        destPublicKey,
-        wallet.publicKey
+        new web3.PublicKey(to),
+        mint.address,
       )
     )
-
-    // if (receiverAccount.isFrozen == true)
-    // {
-    //   instructions.push(Token.createThawAccountInstruction(
-    //     mintToken.associatedProgramId,
-    //     receiverAccount.PublicKey,
-    //     mintPublicKey,
-    //     wallet.publicKey,
-    //     []
-    //   )
-
-    //   )
-    // }
-
-  }
-  
-  instructions.push(
-    Token.createTransferInstruction(
-      TOKEN_PROGRAM_ID,
-      fromTokenAccount.address,
-      associatedDestinationTokenAddr,
-      wallet.publicKey,
-      [],
-      amount
+  else
+  {
+    const account = await splToken.getAccount(
+      connection,
+      associatedDestinationTokenAddr
     )
+    if (account.isFrozen == true)
+    instructions.push(
+      splToken.createThawAccountInstruction(
+        associatedDestinationTokenAddr,
+        mint.address,
+        fromWallet.publicKey,
+      )
+    )
+  }
+  instructions.push(
+    splToken.createTransferInstruction(
+      res.value[0].pubkey,
+      associatedDestinationTokenAddr,
+      fromWallet.publicKey,
+      1
+    )
+  )
+  instructions.push(
+    splToken.createFreezeAccountInstruction(
+      associatedDestinationTokenAddr,
+      mint.address,
+      fromWallet.publicKey,
+    )
+  )
+const transaction = new web3.Transaction().add(...instructions);  const signature = await web3.sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [fromWallet],
   );
-
-  const transaction = new web3.Transaction().add(...instructions);
-  transaction.feePayer = wallet.publicKey;
-  transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
-  
-  const transactionSignature = await connection.sendRawTransaction(
-    transaction.serialize(),
-    { skipPreflight: true }
-  );
-
-  await connection.confirmTransaction(transactionSignature);
+  console.log(signature);
 }
