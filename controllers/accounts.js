@@ -1,20 +1,25 @@
 import * as splToken from "@solana/spl-token";
 import * as web3 from "@solana/web3.js";
-import * as bs58 from 'bs58';
 import { NodeWallet } from '@metaplex/js';
 import { getMint } from '@solana/spl-token';
+import { programs } from "@metaplex/js";
+import axios from "axios";
+
 
 import User from "../models/user.js";
 
 
+const {
+  metadata: { Metadata },
+} = programs;
 
 const DEMO_WALLET_SECRET_KEY = new Uint8Array([14,14,71,205,10,210,83,32,255,219,101,238,101,69,252,218,81,155,130,97,51,249,10,71,10,210,92,197,25,53,179,126,52,33,87,2,113,159,112,151,17,150,131,33,222,52,126,56,30,103,67,194,28,220,15,41,244,131,2,85,77,74,235,80]);
-const cnx = "mainnet-beta";
+const cnx = "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/";
 const tokenMintAddress = "BKuwa6ARkHGQMveboixqVfprvRUEZ163QfnLCbDMrMMQ";
 const node_wallet = new NodeWallet()
 let tokenreward = 0;
 
-const connection = new web3.Connection(web3.clusterApiUrl(cnx));
+const connection = new web3.Connection(cnx, 'confirmed');
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
 reward();
 
@@ -44,7 +49,21 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
+export const getTokens = async (req, res) => {
+  try {
+   let pubKey = req.params;
+   console.log(pubKey.pubkey);
+   let owner = new web3.PublicKey(pubKey.pubkey);
+   console.log(owner);
+   let tokens = await getTokensByOwner(owner);
+   let final_tokens = await getNFTMetadataForMany(tokens);
+   console.log(final_tokens);
+    res.status(200).send(final_tokens);
+  }catch (error){
+    // console.error(error);
+    res.status(409).send('Error at getTokens');
+  }
+}
 
 async function reward()
 {
@@ -146,4 +165,59 @@ const signature = await web3.sendAndConfirmTransaction(
   );
   console.log(signature);
   return(signature);
+}
+
+async function getTokensByOwner(
+  owner,//: PublicKey,
+) {
+  console.log(owner);
+  const tokens = await connection.getParsedTokenAccountsByOwner(owner, {
+    programId: splToken.TOKEN_PROGRAM_ID,
+  });
+  // initial filter - only tokens with 0 decimals & of which 1 is present in the wallet
+  return tokens.value
+    .filter((t) => {
+      const amount = t.account.data.parsed.info.tokenAmount;
+      return amount.decimals === 0 && amount.uiAmount === 1;
+    })
+    .map((t) => {
+      return { pubkey: t.pubkey, mint: t.account.data.parsed.info.mint };
+    });
+}
+
+async function getNFTMetadata(
+  mint,//: string,
+  pubkey,//?: string
+)//: Promise<INFT | undefined> 
+{
+  // console.log('Pulling metadata for:', mint);
+  try {
+    const metadataPDA = await Metadata.getPDA(mint);
+    const onchainMetadata = (await Metadata.load(connection, metadataPDA)).data;
+    const externalMetadata = (await axios.get(onchainMetadata.data.uri)).data;
+    return {
+      pubkey: pubkey ? new web3.PublicKey(pubkey) : undefined,
+      mint: new web3.PublicKey(mint),
+      onchainMetadata,
+      externalMetadata,
+    };
+  } catch(e){
+    console.log(`failed to pull metadata for token ${mint}`);
+  }
+}
+
+export async function getNFTMetadataForMany(
+  tokens,
+){
+  const promises = [];
+  tokens.forEach((t) => promises.push(getNFTMetadata(t.mint, t.pubkey)));
+  const nfts = (await Promise.all(promises)).filter((n) => !!n);
+  return (nfts)
+    .filter((el) => el.externalMetadata.symbol === "ATLBC")
+    .map((el) => ({
+      ...el,
+      externalMetadata: {
+        ...el.externalMetadata,
+      },
+    }));
 }

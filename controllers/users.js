@@ -25,6 +25,7 @@ export const getUser = async (req, res) => {
   }
 };
 
+
 export const createUser = async (req, res) => {
   const { wallet, vault, bank, gems, earned, total, lastStake } = req.body;
   try {
