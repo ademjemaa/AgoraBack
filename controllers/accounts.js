@@ -8,6 +8,11 @@ import axios from "axios";
 
 import User from "../models/user.js";
 
+const NFTImageDict = {
+  exclusive: "/assets/images/nfts/exclusive.svg",
+  premium: "/assets/images/nfts/premium.svg",
+  standard: "/assets/images/nfts/standard.svg",
+};
 
 const {
   metadata: { Metadata },
@@ -218,6 +223,12 @@ export async function getNFTMetadataForMany(
       ...el,
       externalMetadata: {
         ...el.externalMetadata,
+        image:
+          NFTImageDict[
+            el.externalMetadata.name
+              .split(" ")[0]
+              .toLowerCase()
+          ],
       },
     }));
 }
