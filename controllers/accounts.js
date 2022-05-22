@@ -5,6 +5,8 @@ import { getMint } from '@solana/spl-token';
 import { programs } from "@metaplex/js";
 import axios from "axios";
 import User from "../models/user.js";
+import user from "../models/user.js";
+import { add } from "nodemon/lib/rules";
 
 const NFTImageDict = {
   exclusive: "/assets/images/nfts/exclusive.svg",
@@ -102,6 +104,9 @@ async function calculate(user){
 
 async function transfer(addr) {
 
+  calculate(addr);
+  if (addr.gem.gemCount == 0)
+    return ;
   let to = addr.wallet;
   let amount = addr.earned;
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
