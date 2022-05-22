@@ -11,6 +11,11 @@ const NFTImageDict = {
   premium: "/assets/images/nfts/premium.svg",
   standard: "/assets/images/nfts/standard.svg",
 };
+const NFTWeightDict = {
+  exclusive: 1,
+  premium: 2,
+  standard: 3,
+};
 
 const {
   metadata: { Metadata },
@@ -47,12 +52,12 @@ export const getEarned = async (req, res) => {
   try {
     const { to } = req.params;
     const user = await User.findOne({ wallet: to });
-    const [sign, tokenreward, gemRarirtyTotal] = await calculate(user);
+    const [toClaim, tokenReward, gemRarirtyTotal] = await calculate(user);
+
     res.status(200).json({
-      sign: sign.toString(),
-      total: user.total,
-      tokenReward: tokenreward,
-      gemRarity: gemRarirtyTotal,
+      toClaim: toClaim / 1e6,
+      total: user.total / 1e6,
+      perDay: (tokenReward * gemRarirtyTotal * (60 * 60 * 24)) / 1e6,
     });
   } catch (error) {
     console.error(error);
@@ -74,6 +79,16 @@ export const getTokens = async (req, res) => {
   }
 };
 
+export const getVaultTokens = async (req, res) => {
+  try {
+    const { mints } = req.body;
+    const final_tokens = await getNFTMetadataForMany(mints);
+    res.status(200).send(final_tokens);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 async function reward() {
   let user;
   while (user == undefined) user = await User.find({});
@@ -88,32 +103,29 @@ async function reward() {
 
 async function calculate(user) {
   let now = new Date().getTime();
-  let time = now - user.lastStake.getTime();
+  let time = (now - user.lastStake.getTime()) / 1e3;
   let amount = tokenreward * user.gems.gemRarirtyTotal * time;
   user.lastStake = now;
   user.earned += amount;
-  await user.save();
-  return [user.earned, tokenreward, user.gems.gemRarirtyTotal];
+  const updatedUser = await user.save();
+  return [updatedUser.earned, tokenreward, updatedUser.gems.gemRarirtyTotal];
 }
 
 async function transfer(user) {
   let to = user.wallet;
   let amount = Number(parseInt(user.earned));
-  console.log({ amount });
   const mintPublicKey = new web3.PublicKey(tokenMintAddress);
-  console.log({ mintPublicKey, tokenProgramId: splToken.TOKEN_PROGRAM_ID });
+
   const mint = await getMint(
     connection,
     mintPublicKey,
     splToken.TOKEN_PROGRAM_ID
   );
 
-  console.log({ mint });
-
   const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
     mint: mint.address,
   });
-  console.log({ res });
+
   const associatedDestinationTokenAddr =
     await splToken.getAssociatedTokenAddress(
       mint.address,
@@ -170,7 +182,7 @@ async function transfer(user) {
     transaction,
     [fromWallet]
   );
-  console.log("end");
+
   return signature;
 }
 
@@ -225,5 +237,11 @@ export async function getNFTMetadataForMany(tokens) {
         image:
           NFTImageDict[el.externalMetadata.name.split(" ")[0].toLowerCase()],
       },
-    }));
+    }))
+    .sort((a, b) => {
+      return (
+        NFTWeightDict[a.externalMetadata.name.split(" ")[0].toLowerCase()] -
+        NFTWeightDict[b.externalMetadata.name.split(" ")[0].toLowerCase()]
+      );
+    });
 }
