@@ -4,8 +4,6 @@ import { NodeWallet } from '@metaplex/js';
 import { getMint } from '@solana/spl-token';
 import { programs } from "@metaplex/js";
 import axios from "axios";
-
-
 import User from "../models/user.js";
 
 const NFTImageDict = {
