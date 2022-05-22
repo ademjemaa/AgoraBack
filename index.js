@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 
 import userRoutes from "./routes/users.js";
-import accRoutes from "./routes/transfer.js";
+import accRoutes from "./routes/account.js";
 
 const app = express();
 
@@ -15,7 +15,8 @@ app.use(cors());
 app.use("/users", userRoutes);
 app.use("/account", accRoutes);
 
-const CONNECTION_URL = process.env.DBURL ||
+const CONNECTION_URL =
+  process.env.DBURL ||
   "mongodb+srv://Daraos:xSJbu0kArQHSApj5@cluster0.tgecm.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 
 const PORT = process.env.PORT || 5000;
