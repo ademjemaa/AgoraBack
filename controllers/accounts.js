@@ -6,6 +6,7 @@ import { programs } from "@metaplex/js";
 import axios from "axios";
 import User from "../models/user.js";
 
+
 const NFTImageDict = {
   exclusive: "/assets/images/nfts/exclusive.svg",
   premium: "/assets/images/nfts/premium.svg",
@@ -87,7 +88,7 @@ async function reward()
 };
 
 async function calculate(user){
-  if (user.gem.gemCount == 0)
+  if (user.gems.gemCount == 0)
     return ;
   let now = new Date().getTime();
   let time = now - user.lastStake.getTime();
@@ -103,7 +104,7 @@ async function calculate(user){
 async function transfer(addr) {
 
   calculate(addr);
-  if (addr.gem.gemCount == 0)
+  if (addr.gems.gemCount == 0)
     return ;
   let to = addr.wallet;
   let amount = addr.earned;
