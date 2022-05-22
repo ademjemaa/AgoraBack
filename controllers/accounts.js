@@ -102,9 +102,9 @@ async function reward() {
 }
 
 async function calculate(user) {
-  let now = new Date().getTime();
-  let time = (now - user.lastStake.getTime()) / 1e3;
-  let amount = tokenreward * user.gems.gemRarirtyTotal * time;
+  const now = new Date().getTime();
+  const time = (now - user.lastStake.getTime()) / 1e3;
+  const amount = tokenreward * user.gems.gemRarirtyTotal * time;
   user.lastStake = now;
   user.earned += amount;
   const updatedUser = await user.save();
