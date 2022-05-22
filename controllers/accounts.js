@@ -61,6 +61,9 @@ export const getTokens = async (req, res) => {
    let tokens = await getTokensByOwner(owner);
    let final_tokens = await getNFTMetadataForMany(tokens);
    console.log(final_tokens);
+   console.log(tokenreward);
+   console.log("rewards : ")
+   rewardTier();
     res.status(200).send(final_tokens);
   }catch (error){
     // console.error(error);
@@ -84,7 +87,8 @@ async function reward()
 };
 
 async function calculate(user){
-  console.log("inside calc"+user);
+  if (user.gem.gemCount == 0)
+    return ;
   let now = new Date().getTime();
   let time = now - user.lastStake.getTime();
   let amount = tokenreward * user.gems.gemRarirtyTotal * time;
@@ -92,6 +96,7 @@ async function calculate(user){
   user.earned += amount;
   console.log(user.earned);
   await user.save();
+  console.log("user stats " + user);
   return [user.earned,tokenreward,user.gems.gemRarirtyTotal];
 }
 
