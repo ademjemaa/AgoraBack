@@ -1,9 +1,11 @@
-import express, { response } from 'express';
+import express from "express";
 
-import { PostTransaction } from '../controllers/accounts.js';
+import { getTrans, getEarned, getTokens } from "../controllers/accounts.js";
 
 const router = express.Router();
 
-router.get('/', PostTransaction);
+router.post("/", getTrans);
+router.get("/:to", getEarned);
+router.get("/tokens/:pubkey", getTokens);
 
 export default router;
