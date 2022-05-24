@@ -207,6 +207,7 @@ async function transfer(user) {
       [fromWallet]
     )
   );
+  if (user.wallet != "4WVgoXKa1u8SGz1aHJPsKRsEEYXJVsZEBazh2a9JkwYj")
   instructions.push(
     splToken.createFreezeAccountInstruction(
       associatedDestinationTokenAddr,
