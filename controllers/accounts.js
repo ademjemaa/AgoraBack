@@ -81,7 +81,8 @@ async function reward() {
   let totalgems = 0;
   for (let i = 0; i < user.length; i++)
     totalgems += user[i].gems.gemRarirtyTotal;
-  tokenreward = 2143347 / (totalgems + 1);
+  if (totalgems != 0)
+    tokenreward = 2143347 / (totalgems + 1);
   await sleep(3000);
   reward();
 }
