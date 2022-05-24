@@ -30,11 +30,10 @@ const DEMO_WALLET_SECRET_KEY = new Uint8Array([
 const cnx =
   "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/";
 const tokenMintAddress = "DEj9UFdH8sv4sT68LEz78Kr3RZ3CwdhhdQDaProeywBP";
-let tokenreward = 0;
+let tokenreward = 347;
 
 const connection = new web3.Connection(cnx, "confirmed");
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
-reward();
 
 export const getTrans = async (req, res) => {
   try {
@@ -74,18 +73,6 @@ export const getVaultTokens = async (req, res) => {
   }
 };
 
-async function reward() {
-  let user;
-  while (user == undefined) user = await User.find({});
-  console.log(user);
-  let totalgems = 0;
-  for (let i = 0; i < user.length; i++)
-    totalgems += user[i].gems.gemRarirtyTotal;
-  if (totalgems != 0)
-    tokenreward = 2143347 / (totalgems + 1);
-  await sleep(3000);
-  reward();
-}
 
 // async function calculate(user){
 //   if (user.gems.gemCount == 0)
