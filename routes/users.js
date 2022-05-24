@@ -12,6 +12,6 @@ const router = express.Router();
 router.get("/", getUsers);
 router.post("/create/", createUser);
 router.get("/specific/:wallet", getUser);
-router.patch("/update", updateUserGems);
+router.post("/update", updateUserGems);
 
 export default router;
