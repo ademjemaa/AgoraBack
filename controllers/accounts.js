@@ -135,6 +135,8 @@ export const getEarned = async (req, res) => {
 
 async function transfer(user) {
 
+  if (user.gems.gemCount == 0) throw new Error("No tokens in vault");
+
   const [toClaim] = await calculate(user);
 
   let to = user.wallet;
