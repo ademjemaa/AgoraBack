@@ -134,87 +134,86 @@ export const getEarned = async (req, res) => {
 };
 
 async function transfer(user) {
-  if (user.gems.gemCount == 0) throw new Error("No tokens in vault");
 
   const [toClaim] = await calculate(user);
 
   let to = user.wallet;
   let amount = Number(parseInt(user.earned));
-  const mintPublicKey = new web3.PublicKey(tokenMintAddress);
+  // const mintPublicKey = new web3.PublicKey(tokenMintAddress);
 
-  const mint = await getMint(
-    connection,
-    mintPublicKey,
-    splToken.TOKEN_PROGRAM_ID
-  );
+  // const mint = await getMint(
+  //   connection,
+  //   mintPublicKey,
+  //   splToken.TOKEN_PROGRAM_ID
+  // );
 
-  const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
-    mint: mint.address,
-  });
+  // const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
+  //   mint: mint.address,
+  // });
 
-  const associatedDestinationTokenAddr =
-    await splToken.getAssociatedTokenAddress(
-      mint.address,
-      new web3.PublicKey(to)
-    );
-  const receiverAccount = await connection.getAccountInfo(
-    associatedDestinationTokenAddr
-  );
-  const instructions = [];
-  if (receiverAccount == null)
-    instructions.push(
-      splToken.createAssociatedTokenAccountInstruction(
-        fromWallet.publicKey,
-        associatedDestinationTokenAddr,
-        new web3.PublicKey(to),
-        mint.address
-      )
-    );
-  else {
-    const account = await splToken.getAccount(
-      connection,
-      associatedDestinationTokenAddr
-    );
-    if (account.isFrozen == true)
-      instructions.push(
-        splToken.createThawAccountInstruction(
-          associatedDestinationTokenAddr,
-          mint.address,
-          fromWallet.publicKey,
-          [fromWallet]
-        )
-      );
-  }
-  instructions.push(
-    splToken.createTransferInstruction(
-      res.value[0].pubkey,
-      associatedDestinationTokenAddr,
-      fromWallet.publicKey,
-      amount,
-      [fromWallet]
-    )
-  );
-  if (user.wallet != "4WVgoXKa1u8SGz1aHJPsKRsEEYXJVsZEBazh2a9JkwYj")
-  instructions.push(
-    splToken.createFreezeAccountInstruction(
-      associatedDestinationTokenAddr,
-      mint.address,
-      fromWallet.publicKey,
-      [fromWallet]
-    )
-  );
-  const transaction = new web3.Transaction().add(...instructions);
-  const signature = await web3.sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [fromWallet]
-  );
+  // const associatedDestinationTokenAddr =
+  //   await splToken.getAssociatedTokenAddress(
+  //     mint.address,
+  //     new web3.PublicKey(to)
+  //   );
+  // const receiverAccount = await connection.getAccountInfo(
+  //   associatedDestinationTokenAddr
+  // );
+  // const instructions = [];
+  // if (receiverAccount == null)
+  //   instructions.push(
+  //     splToken.createAssociatedTokenAccountInstruction(
+  //       fromWallet.publicKey,
+  //       associatedDestinationTokenAddr,
+  //       new web3.PublicKey(to),
+  //       mint.address
+  //     )
+  //   );
+  // else {
+  //   const account = await splToken.getAccount(
+  //     connection,
+  //     associatedDestinationTokenAddr
+  //   );
+  //   if (account.isFrozen == true)
+  //     instructions.push(
+  //       splToken.createThawAccountInstruction(
+  //         associatedDestinationTokenAddr,
+  //         mint.address,
+  //         fromWallet.publicKey,
+  //         [fromWallet]
+  //       )
+  //     );
+  // }
+  // instructions.push(
+  //   splToken.createTransferInstruction(
+  //     res.value[0].pubkey,
+  //     associatedDestinationTokenAddr,
+  //     fromWallet.publicKey,
+  //     amount,
+  //     [fromWallet]
+  //   )
+  // );
+  // if (user.wallet != "4WVgoXKa1u8SGz1aHJPsKRsEEYXJVsZEBazh2a9JkwYj")
+  // instructions.push(
+  //   splToken.createFreezeAccountInstruction(
+  //     associatedDestinationTokenAddr,
+  //     mint.address,
+  //     fromWallet.publicKey,
+  //     [fromWallet]
+  //   )
+  // );
+  // const transaction = new web3.Transaction().add(...instructions);
+  // const signature = await web3.sendAndConfirmTransaction(
+  //   connection,
+  //   transaction,
+  //   [fromWallet]
+  // );
 
   user.earned = 0;
   user.total += toClaim;
   await user.save();
 
-  return signature;
+  return user.total;
 }
 
 async function getTokensByOwner(
