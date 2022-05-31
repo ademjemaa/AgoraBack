@@ -30,7 +30,7 @@ const DEMO_WALLET_SECRET_KEY = new Uint8Array([
 const cnx =
   "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/";
 const tokenMintAddress = "DEj9UFdH8sv4sT68LEz78Kr3RZ3CwdhhdQDaProeywBP";
-let tokenreward = 347;
+let tokenreward = 347.22;
 
 const connection = new web3.Connection(cnx, "confirmed");
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
