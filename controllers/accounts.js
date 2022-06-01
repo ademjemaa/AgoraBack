@@ -76,7 +76,7 @@ export const getVaultTokens = async (req, res) => {
 
     for (let i = 0; i < final_tokens.length; i++) {
       let { name } = final_tokens[i];
-      name = NFTRarityDict[name.split(" ")[0]] ?? 0;
+      name = NFTWeightDict[name.split(" ")[0]] ?? 0;
       if (name === "exclusive") {
         user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
         user.gems.gemTypes.exclusif += 1;
