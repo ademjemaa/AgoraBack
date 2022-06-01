@@ -75,16 +75,16 @@ export const getVaultTokens = async (req, res) => {
     //loop through all the final_tokens and update the user gems based on name in metadata
 
     for (let i = 0; i < final_tokens.length; i++) {
-      let { name } = final_tokens[i];
-      name = NFTWeightDict[name.split(" ")[0]] ?? 0;
-      if (name === "exclusive") {
+      const { name } = final_tokens[i].split(" ")[0];
+      //rarity = NFTWeightDict[name.split(" ")[0]] ?? 0;
+      if (name === "Exclusive") {
         user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
         user.gems.gemTypes.exclusif += 1;
-      } else if (name === "premium") {
+      } else if (name === "Premium") {
         user.gems += NFTWeightDict.premium;
         user.gems.gemTypes.premium += 1;
 
-      } else if (name === "standard") {
+      } else if (name === "Standard") {
         user.gems += NFTWeightDict.standard;
         user.gems.gemTypes.standard += 1;
       }
