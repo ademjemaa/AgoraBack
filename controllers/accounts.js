@@ -67,22 +67,29 @@ export const getVaultTokens = async (req, res) => {
   try {
     const { mints } = req.body;
     const { pubkey } = req.params;
-    console.log(pubkey);
     const user = await User.findOne({ wallet: pubkey });
     const final_tokens = await getNFTMetadataForMany(mints);
-    console.log(final_tokens);
+    // re-init user gems & count from scratch 
+    const newUser = new User;
+    user.gems = newUser.gems;
     //loop through all the final_tokens and update the user gems based on name in metadata
-    user.gems.gemRarirtyTotal = 0;
+
     for (let i = 0; i < final_tokens.length; i++) {
-      const { name } = final_tokens[i];
+      let { name } = final_tokens[i];
+      name = NFTRarityDict[name.split(" ")[0]] ?? 0;
       if (name === "exclusive") {
-        user.gems.gemRarirtyTotal = NFTWeightDict.exclusive;
+        user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
+        user.gems.gemTypes.exclusif += 1;
       } else if (name === "premium") {
         user.gems += NFTWeightDict.premium;
+        user.gems.gemTypes.premium += 1;
+
       } else if (name === "standard") {
         user.gems += NFTWeightDict.standard;
+        user.gems.gemTypes.standard += 1;
       }
     }
+    user.gems.gemCount = final_tokens.length;
     res.status(200).send(final_tokens);
   } catch (error) {
     console.error(error);
