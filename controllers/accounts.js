@@ -12,9 +12,9 @@ const NFTImageDict = {
   standard: "/assets/images/nfts/standard.svg",
 };
 const NFTWeightDict = {
-  exclusive: 33.3,
-  premium: 3.3,
-  standard: 1,
+  Standard: 1,
+  Premium: 3.3,
+  Exclusive: 33.3,
 };
 
 const {
