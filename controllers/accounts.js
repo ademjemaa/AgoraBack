@@ -12,9 +12,9 @@ const NFTImageDict = {
   standard: "/assets/images/nfts/standard.svg",
 };
 const NFTWeightDict = {
-  exclusive: 1,
-  premium: 2,
-  standard: 3,
+  exclusive: 33.3,
+  premium: 3.3,
+  standard: 1,
 };
 
 const {
@@ -66,7 +66,23 @@ export const getTokens = async (req, res) => {
 export const getVaultTokens = async (req, res) => {
   try {
     const { mints } = req.body;
+    const { pubkey } = req.params;
+    console.log(pubkey);
+    const user = await User.findOne({ wallet: pubkey });
     const final_tokens = await getNFTMetadataForMany(mints);
+    console.log(final_tokens);
+    //loop through all the final_tokens and update the user gems based on name in metadata
+    user.gems.gemRarirtyTotal = 0;
+    for (let i = 0; i < final_tokens.length; i++) {
+      const { name } = final_tokens[i];
+      if (name === "exclusive") {
+        user.gems.gemRarirtyTotal = NFTWeightDict.exclusive;
+      } else if (name === "premium") {
+        user.gems += NFTWeightDict.premium;
+      } else if (name === "standard") {
+        user.gems += NFTWeightDict.standard;
+      }
+    }
     res.status(200).send(final_tokens);
   } catch (error) {
     console.error(error);
