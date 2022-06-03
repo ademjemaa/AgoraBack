@@ -5,7 +5,7 @@ const icoSchema = mongoose.Schema({
   amount: { type : Number, default: 0},
   method: String,
   token: String,
-  date: Date
+  date: { type : Number, default: new Date()},
 });
 
 const ico = mongoose.model("icoModel", icoSchema);
