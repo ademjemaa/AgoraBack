@@ -1,5 +1,7 @@
-import ICO from "../models/ICO";
-import User from "../models/user";
+import User from "../models/user.js";
+
+import Ico from "../models/ICO";
+
 import whiteList from "../config/ICOWhitelist.json";
 
 let totalCoins = 500;
@@ -15,18 +17,18 @@ export const BuyIco = async (req, res) => {
       if(req.body.amount > totalCoins) throw new Error("Out of coins or the amount you chose is greater than what we have left");
 
 
-      const ico =  new ICO();
-      ico.wallet = wallet;
-      ico.amount = req.body.amount;
-      ico.method = req.body.method;
-      ico.token = req.body.token;
-      ico.date = new Date();
-      user.icoBaught = ico.amount;
+      const _Ico =  new Ico();
+      _Ico.wallet = wallet;
+      _Ico.amount = req.body.amount;
+      _Ico.method = req.body.method;
+      _Ico.token = req.body.token;
+      _Ico.date = new Date();
+      user.IcoBaught = _Ico.amount;
       const resUser = await user.save();
-      const resIco = await ico.save();
-      totalCoins -= ico.amount;
+      const resIco = await Ico.save();
+      totalCoins -= _Ico.amount;
       return res.status(200).json({
-        amount: user.icoBaught,
+        amount: user.IcoBaught,
         left: totalCoins,
       });
     } catch (error) {
