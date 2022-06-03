@@ -6,6 +6,7 @@ const userSchema = mongoose.Schema({
   vault: String,
   earned: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
+  icoBaught : { type : Number, default: 0},
   lastStake: { type: Date, default: new Date() },
   gems: {
     gemCount: { type: Number, default: 0 },

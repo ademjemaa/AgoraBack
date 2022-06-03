@@ -12,9 +12,9 @@ const NFTImageDict = {
   standard: "/assets/images/nfts/standard.svg",
 };
 const NFTWeightDict = {
-  exclusive: 1,
-  premium: 2,
-  standard: 3,
+  Standard: 1,
+  Premium: 3.3,
+  Exclusive: 33.3,
 };
 
 const {
@@ -30,7 +30,7 @@ const DEMO_WALLET_SECRET_KEY = new Uint8Array([
 const cnx =
   "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/";
 const tokenMintAddress = "DEj9UFdH8sv4sT68LEz78Kr3RZ3CwdhhdQDaProeywBP";
-let tokenreward = 347;
+let tokenreward = 347.22;
 
 const connection = new web3.Connection(cnx, "confirmed");
 var fromWallet = web3.Keypair.fromSecretKey(DEMO_WALLET_SECRET_KEY);
@@ -66,7 +66,30 @@ export const getTokens = async (req, res) => {
 export const getVaultTokens = async (req, res) => {
   try {
     const { mints } = req.body;
+    const { pubkey } = req.params;
+    const user = await User.findOne({ wallet: pubkey });
     const final_tokens = await getNFTMetadataForMany(mints);
+    // re-init user gems & count from scratch 
+    const newUser = new User;
+    user.gems = newUser.gems;
+    //loop through all the final_tokens and update the user gems based on name in metadata
+
+    for (let i = 0; i < final_tokens.length; i++) {
+      const { name } = final_tokens[i].split(" ")[0];
+      //rarity = NFTWeightDict[name.split(" ")[0]] ?? 0;
+      if (name === "Exclusive") {
+        user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
+        user.gems.gemTypes.exclusif += 1;
+      } else if (name === "Premium") {
+        user.gems += NFTWeightDict.premium;
+        user.gems.gemTypes.premium += 1;
+
+      } else if (name === "Standard") {
+        user.gems += NFTWeightDict.standard;
+        user.gems.gemTypes.standard += 1;
+      }
+    }
+    user.gems.gemCount = final_tokens.length;
     res.status(200).send(final_tokens);
   } catch (error) {
     console.error(error);

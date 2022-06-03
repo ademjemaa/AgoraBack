@@ -12,6 +12,6 @@ const router = express.Router();
 router.post("/", getTrans);
 router.get("/:to", getEarned);
 router.get("/tokens/:pubkey", getTokens);
-router.post("/vault-tokens", getVaultTokens);
+router.post("/vault-tokens/:pubkey", getVaultTokens);
 
 export default router;
