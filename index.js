@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import cors from "cors";
+import "dotenv/config";
 
 import userRoutes from "./routes/users.js";
 import accRoutes from "./routes/account.js";
@@ -28,4 +29,4 @@ mongoose
   )
   .catch(() => console.log("launch error, probably ip address on mongo db"));
 
-//mongoose.set('useFindAndModify', false);
+// mongoose.set("useFindAndModify", false);
