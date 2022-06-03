@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 
 import userRoutes from "./routes/users.js";
+import icoRoutes from "./routes/ico.js";
 import accRoutes from "./routes/account.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(cors());
 
 app.use("/users", userRoutes);
 app.use("/account", accRoutes);
+app.use("/ico", icoRoutes);
 
 const CONNECTION_URL =
   process.env.DBURL ||
