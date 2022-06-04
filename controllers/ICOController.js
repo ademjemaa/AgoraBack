@@ -1,24 +1,32 @@
 import User from "../models/user.js";
 import Ico from "../models/ICO.js";
-
+import axios from "axios";
 const coins = Number(process.env.TOTALAGORA);
+import whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
+import _stripe from "stripe";
 
-import * as whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
+const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 
 if (!process.env.STRIPE_SECRET_KEY)
   throw new Error("Stripe secret key not set");
 
-const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
-
-const whiteListedWallets = whiteList.default.wallets;
-let baught = 0;
-let coins_left = coins - baught;
-
 export const BuyIco = async (req, res) => {
   const { wallet } = req.params;
-  const { amount, method, token } = req.body;
+  let { amount, method } = req.body;
 
   try {
+    let sol_price = (
+      await axios.get(
+        "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
+      )
+    ).data.price;
+    if (method == "SOL") {
+      amount = amount * sol_price;
+    }
+    let end_tokens = 0;
+    if (whiteList[wallet]) {
+      end_tokens = amount / whiteList[wallet];
+    } else throw new Error("Wallet not whitelisted");
     const user = await User.findOne({ wallet: wallet });
     if (!User) throw new Error("user not found");
 
@@ -29,17 +37,14 @@ export const BuyIco = async (req, res) => {
 
     const _ico = await Ico.create({
       wallet,
-      amount,
+      end_tokens,
       method,
-      token,
     });
-    user.IcoBaught = _ico.amount;
+
+    user.IcoBaught += _ico.amount;
+    user.earned += _ico.amount;
     await user.save();
-    await _ico.save();
-    return res.status(200).json({
-      amount: user.IcoBaught,
-      left: coins_left - user.IcoBaught,
-    });
+    return res.send("OK");
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
@@ -48,19 +53,23 @@ export const BuyIco = async (req, res) => {
 export const checkWhiteListed = async (req, res) => {
   const { wallet } = req.params;
 
-  try {
-    const bol = whiteListedWallets.includes(wallet.toString());
-    if (bol == false) throw new Error("User not WhiteListed");
-    return res.status(200).json({ res: true });
-  } catch (error) {
-    res.status(401).json({ message: error.message });
-  }
+  let price = 0.013;
+  let bol = true;
+  if (whiteList[wallet]) {
+    price = whiteList[wallet];
+  } else bol = false;
+  let response = {
+    price: price,
+    can_buy: bol,
+  };
+  return res.status(200).json(response);
 };
 
 export const TotalAgoraLeft = async (req, res) => {
   try {
-    baught = await Ico.aggregate([{ $sum: "$amount" }]);
-    return res.status(200).json({ left: coins - baught, max: coins });
+    const bought = await Ico.aggregate([{ $sum: "$amount" }])[0];
+    console.log({ bought });
+    return res.status(200).json({ left: coins - bought, max: coins });
   } catch (error) {
     res.status(401).json({ message: error.message });
   }
