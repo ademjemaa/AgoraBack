@@ -10,34 +10,36 @@ const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 if (!process.env.STRIPE_SECRET_KEY)
   throw new Error("Stripe secret key not set");
 
+const getSolanaPrice = async () =>
+  (
+    await axios.get(
+      "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
+    )
+  ).data.price;
+
 export const BuyIco = async (req, res) => {
   const { wallet } = req.params;
   let { amount, method } = req.body;
 
   try {
-    let sol_price = (
-      await axios.get(
-        "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
-      )
-    ).data.price;
+    let sol_price = await getSolanaPrice();
     if (method == "SOL") {
       amount = amount * sol_price;
     }
-    let end_tokens = 0;
     if (whiteList[wallet]) {
-      end_tokens = amount / whiteList[wallet];
+      amount = amount / whiteList[wallet];
     } else throw new Error("Wallet not whitelisted");
     const user = await User.findOne({ wallet: wallet });
     if (!User) throw new Error("user not found");
 
-    if (amount > coins)
+    if (amount > (await getRemaingingCoins()))
       throw new Error(
         "Out of coins or the amount you chose is greater than what we have left"
       );
 
     const _ico = await Ico.create({
       wallet,
-      end_tokens,
+      amount,
       method,
     });
 
@@ -59,17 +61,34 @@ export const checkWhiteListed = async (req, res) => {
     price = whiteList[wallet];
   } else bol = false;
   let response = {
+    solanaPrice: await getSolanaPrice(),
     price: price,
-    can_buy: bol,
+    canBuy: bol,
   };
   return res.status(200).json(response);
 };
 
+const getRemaingingCoins = async () => {
+  return (
+    coins -
+    ((await Ico.aggregate([
+      {
+        $group: {
+          _id: null,
+          sum: {
+            $sum: "$amount",
+          },
+        },
+      },
+    ])[0]?.sum) || 0)
+  );
+};
+
 export const TotalAgoraLeft = async (req, res) => {
   try {
-    const bought = await Ico.aggregate([{ $sum: "$amount" }])[0];
-    console.log({ bought });
-    return res.status(200).json({ left: coins - bought, max: coins });
+    return res
+      .status(200)
+      .json({ left: await getRemaingingCoins(), max: coins });
   } catch (error) {
     res.status(401).json({ message: error.message });
   }
