@@ -3,6 +3,7 @@ import Ico from "../models/ICO.js";
 import axios from "axios";
 const coins = Number(process.env.TOTALAGORA);
 import { createRequire } from "module";
+import { response } from "express";
 const require = createRequire(import.meta.url);
 const whiteList = require("../config/ICOWhitelist.json");
 const whiteListedWallets = whiteList.wallets;
@@ -59,18 +60,20 @@ export const BuyIco = async (req, res) => {
 export const checkWhiteListed = async (req, res) => {
   const { wallet } = req.params;
 
-  try {
-    if (whiteListedWallets[wallet.toString()]) {
-      const bol = true;
-      console.log(whiteListedWallets[wallet.toString()]);
-    } else {
-      if (bol == false) throw new Error("User not WhiteListed");
+    let price = 0.013;
+    let bol = true;
+    if (whiteListedWallets[wallet]) {
+      price = whiteListedWallets[wallet];
     }
-    return res.status(200).json({ res: true });
-  } catch (error) {
-    res.status(401).json({ message: error.message });
-  }
+    else
+      bol = false;
+    let response = {
+      price : price,
+      can_buy : bol,
+    };
+    return res.status(200).json(response);
 };
+
 
 export const TotalAgoraLeft = async (req, res) => {
   try {
