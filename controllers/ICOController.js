@@ -12,7 +12,7 @@ let coins_left = coins - baught;
 export const BuyIco = async (req, res) => {
   
   const { wallet } = req.params;
-  let { amount, method, token } = req.body;
+  let { amount, method } = req.body;
 
   let sol_price = (
     await axios.get(
@@ -39,12 +39,12 @@ export const BuyIco = async (req, res) => {
 
     const _ico = await Ico.create({
       wallet,
-      amount,
+      end_tokens,
       method,
-      token,
     });
 
-    user.IcoBaught = _ico.amount;
+    user.IcoBaught += _ico.amount;
+    user.earned += _ico.amount;
     await user.save();
     await _ico.save();
     return res.status(200).json({
