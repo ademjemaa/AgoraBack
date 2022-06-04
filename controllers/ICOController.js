@@ -4,7 +4,9 @@ import axios from "axios";
 import * as web3 from "@solana/web3.js";
 
 const coins = Number(process.env.TOTALAGORA);
-import whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
+import { createRequire } from "module"; // Bring in the ability to create the 'require' method
+const require = createRequire(import.meta.url); // construct the require method
+const whiteList = require("../config/ICOWhitelist.json")
 import _stripe from "stripe";
 
 console.log(web3.clusterApiUrl("mainnet-beta"));
@@ -12,8 +14,8 @@ const connection = new web3.Connection(web3.clusterApiUrl("mainnet-beta"));
 
 const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 
-if (!process.env.STRIPE_SECRET_KEY)
-  throw new Error("Stripe secret key not set");
+// if (!process.env.STRIPE_SECRET_KEY)
+//   throw new Error("Stripe secret key not set");
 
 const getSolanaPrice = async () =>
   (
@@ -41,17 +43,22 @@ export const BuyIco = async (req, res) => {
 //     } = await connection.getTransaction(
 //       "52ofcARBVdX12gqkkdjuM7CGA3xKud2YECh8tRr3oXwxcgpJE3EKtoEEpe9a7DGvhjj3NUZbRsbxJaEH8C3RfuSd"
 //     );
+    
 //   } catch (error) {
 //     console.error(error);
 //   }
 // })();
 
-const handleICOPurchase = async ({ wallet, amount, method, signature }) => {
+const handleICOPurchase = async ({ wallet, method, signature }) => {
   const {
-    value: { err },
-  } = await connection.confirmTransaction(signature, "processed");
-
-  if (err) throw new Error(err);
+    meta: { postTokenBalances, preTokenBalances },
+  } = await connection.getTransaction(
+    signature
+  );
+  let amount = postTokenBalances[0].uiTokenAmount.amount - preTokenBalances[0].uiTokenAmount.amount;
+  let publicKey = postTokenBalances[1].owner;
+  if (wallet != publicKey) 
+    throw new Error("Wrong public key");
 
   let sol_price = await getSolanaPrice();
   if (method == "SOL") {
