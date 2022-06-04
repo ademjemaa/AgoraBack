@@ -6,7 +6,7 @@ import * as web3 from "@solana/web3.js";
 const coins = Number(process.env.TOTALAGORA);
 import { createRequire } from "module"; // Bring in the ability to create the 'require' method
 const require = createRequire(import.meta.url); // construct the require method
-const whiteList = require("../config/ICOWhitelist.json")
+const whiteList = require("../config/ICOWhitelist.json");
 import _stripe from "stripe";
 
 console.log(web3.clusterApiUrl("mainnet-beta"));
@@ -36,29 +36,18 @@ export const BuyIco = async (req, res) => {
   }
 };
 
-// (async () => {
-//   try {
-//     const {
-//       meta: { postTokenBalances, preTokenBalances },
-//     } = await connection.getTransaction(
-//       "52ofcARBVdX12gqkkdjuM7CGA3xKud2YECh8tRr3oXwxcgpJE3EKtoEEpe9a7DGvhjj3NUZbRsbxJaEH8C3RfuSd"
-//     );
-    
-//   } catch (error) {
-//     console.error(error);
-//   }
-// })();
-
 const handleICOPurchase = async ({ wallet, method, signature }) => {
+  if (await Ico.findOne({ signature }))
+    throw new Error("signature already used");
+
   const {
     meta: { postTokenBalances, preTokenBalances },
-  } = await connection.getTransaction(
-    signature
-  );
-  let amount = postTokenBalances[0].uiTokenAmount.amount - preTokenBalances[0].uiTokenAmount.amount;
+  } = await connection.getTransaction(signature);
+  let amount =
+    postTokenBalances[0].uiTokenAmount.amount -
+    preTokenBalances[0].uiTokenAmount.amount;
   let publicKey = postTokenBalances[1].owner;
-  if (wallet != publicKey) 
-    throw new Error("Wrong public key");
+  if (wallet != publicKey) throw new Error("Wrong public key");
 
   let sol_price = await getSolanaPrice();
   if (method == "SOL") {
@@ -79,6 +68,7 @@ const handleICOPurchase = async ({ wallet, method, signature }) => {
     wallet,
     amount,
     method,
+    signature,
   });
 
   user.IcoBaught += _ico.amount;
