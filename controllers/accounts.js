@@ -39,10 +39,6 @@ export const getTrans = async (req, res) => {
   }
 };
 
-async function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export const getTokens = async (req, res) => {
   try {
     const { pubkey } = req.params;
@@ -67,15 +63,14 @@ export const getVaultTokens = async (req, res) => {
     //loop through all the final_tokens and update the user gems based on name in metadata
 
     for (let i = 0; i < final_tokens.length; i++) {
-      const { name } = final_tokens[i].split(" ")[0];
-      //rarity = NFTWeightDict[name.split(" ")[0]] ?? 0;
-      if (name === "Exclusive") {
+      const { name } = final_tokens[i].externalMetadata;
+      if (name.startsWith("Exclusive")) {
         user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
         user.gems.gemTypes.exclusif += 1;
-      } else if (name === "Premium") {
+      } else if (name.startsWith("Premium")) {
         user.gems += NFTWeightDict.premium;
         user.gems.gemTypes.premium += 1;
-      } else if (name === "Standard") {
+      } else if (name.startsWith("Standard")) {
         user.gems += NFTWeightDict.standard;
         user.gems.gemTypes.standard += 1;
       }

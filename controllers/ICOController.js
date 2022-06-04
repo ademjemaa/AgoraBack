@@ -2,27 +2,26 @@ import User from "../models/user.js";
 import Ico from "../models/ICO.js";
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
-
-const coins = Number(process.env.TOTALAGORA);
-import { createRequire } from "module"; // Bring in the ability to create the 'require' method
-const require = createRequire(import.meta.url); // construct the require method
-const whiteList = require("../config/ICOWhitelist.json");
+import whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
 import _stripe from "stripe";
 
-console.log(web3.clusterApiUrl("mainnet-beta"));
+const coins = Number(process.env.TOTALAGORA);
+
 const connection = new web3.Connection(web3.clusterApiUrl("mainnet-beta"));
 
 const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 
-// if (!process.env.STRIPE_SECRET_KEY)
-//   throw new Error("Stripe secret key not set");
+if (!process.env.STRIPE_SECRET_KEY)
+  throw new Error("Stripe secret key not set");
 
 const getSolanaPrice = async () =>
-  (
-    await axios.get(
-      "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
-    )
-  ).data.price;
+  Number(
+    (
+      await axios.get(
+        "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
+      )
+    ).data.price
+  );
 
 export const BuyIco = async (req, res) => {
   const { wallet } = req.params;
@@ -36,27 +35,62 @@ export const BuyIco = async (req, res) => {
   }
 };
 
-const handleICOPurchase = async ({ wallet, method, signature }) => {
-  if (await Ico.findOne({ signature }))
-    throw new Error("signature already used");
+export const handleStripeCheckout = async (req, res) => {
+  try {
+    const { publicKey, payment_intent, redirect_status } = req.query;
 
-  const {
-    meta: { postTokenBalances, preTokenBalances },
-  } = await connection.getTransaction(signature);
-  let amount =
-    postTokenBalances[0].uiTokenAmount.amount -
-    preTokenBalances[0].uiTokenAmount.amount;
-  let publicKey = postTokenBalances[1].owner;
-  if (wallet != publicKey) throw new Error("Wrong public key");
+    if (redirect_status !== "succeeded")
+      throw new Error("Stripe checkout failed");
 
-  let sol_price = await getSolanaPrice();
-  if (method == "SOL") {
-    amount = amount * sol_price;
+    const { amount, status } = await stripe.paymentIntents.retrieve(
+      payment_intent
+    );
+
+    if (status !== "succeeded") throw new Error("Stripe checkout failed");
+
+    await handleICOPurchase({
+      wallet: publicKey,
+      amount: amount / 100,
+      method: "FIAT",
+      paymentIntent: payment_intent,
+    });
+    res.redirect(`${process.env.WEBAPP_HOST}/ico`);
+  } catch (error) {
+    res.redirect(process.env.WEBAPP_HOST);
+  }
+};
+
+const handleICOPurchase = async ({
+  wallet,
+  method,
+  signature,
+  amount,
+  paymentIntent,
+}) => {
+  if (method !== "FIAT") {
+    if (await Ico.findOne({ signature }))
+      throw new Error("signature already used");
+
+    const {
+      meta: { postTokenBalances, preTokenBalances },
+    } = await connection.getTransaction(signature);
+    amount =
+      postTokenBalances[0].uiTokenAmount.amount -
+      preTokenBalances[0].uiTokenAmount.amount;
+    let publicKey = postTokenBalances[1].owner;
+    if (wallet != publicKey) throw new Error("Wrong public key");
+    let sol_price = await getSolanaPrice();
+    if (method == "SOL") {
+      amount = amount * sol_price;
+    }
+  } else {
+    if (await Ico.findOne({ paymentIntent }))
+      throw new Error("paymentIntent already used");
   }
   if (whiteList[wallet]) {
     amount = amount / whiteList[wallet];
   } else throw new Error("Wallet not whitelisted");
-  const user = await User.findOne({ wallet: wallet });
+  const user = await User.findOne({ wallet });
   if (!User) throw new Error("user not found");
 
   if (amount > (await getRemaingingCoins()))
@@ -71,8 +105,8 @@ const handleICOPurchase = async ({ wallet, method, signature }) => {
     signature,
   });
 
-  user.IcoBaught += _ico.amount;
-  user.earned += _ico.amount;
+  user.icoBaught += _ico.amount * 1e6;
+  user.earned += _ico.amount * 1e6;
   await user.save();
 };
 
@@ -125,7 +159,7 @@ export const getPaymentIntent = async (req, res) => {
   if (!publicKey) return res.status(403).send("Public key is required");
 
   const paymentIntent = await stripe.paymentIntents.create({
-    amount,
+    amount: amount * 100,
     currency: "usd",
     automatic_payment_methods: {
       enabled: true,

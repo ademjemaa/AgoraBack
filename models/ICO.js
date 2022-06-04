@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const icoSchema = mongoose.Schema({
   wallet: String,
   signature: String,
+  paymentIntent: String,
   amount: { type: Number, default: 0 },
   method: String,
   date: { type: Number, default: new Date() },
