@@ -1,10 +1,9 @@
-import 'dotenv/config';
+import "dotenv/config";
 
 import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import cors from "cors";
-import "dotenv/config";
 
 import userRoutes from "./routes/users.js";
 import icoRoutes from "./routes/ico.js";

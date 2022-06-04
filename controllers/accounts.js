@@ -69,8 +69,8 @@ export const getVaultTokens = async (req, res) => {
     const { pubkey } = req.params;
     const user = await User.findOne({ wallet: pubkey });
     const final_tokens = await getNFTMetadataForMany(mints);
-    // re-init user gems & count from scratch 
-    const newUser = new User;
+    // re-init user gems & count from scratch
+    const newUser = new User();
     user.gems = newUser.gems;
     //loop through all the final_tokens and update the user gems based on name in metadata
 
@@ -83,7 +83,6 @@ export const getVaultTokens = async (req, res) => {
       } else if (name === "Premium") {
         user.gems += NFTWeightDict.premium;
         user.gems.gemTypes.premium += 1;
-
       } else if (name === "Standard") {
         user.gems += NFTWeightDict.standard;
         user.gems.gemTypes.standard += 1;
@@ -95,7 +94,6 @@ export const getVaultTokens = async (req, res) => {
     console.error(error);
   }
 };
-
 
 // async function calculate(user){
 //   if (user.gems.gemCount == 0)
@@ -144,6 +142,14 @@ export const getEarned = async (req, res) => {
   try {
     const { to } = req.params;
     const user = await User.findOne({ wallet: to });
+
+    if (!user)
+      return res.send({
+        toClaim: 0,
+        total: 0,
+        perDay: 0,
+      });
+
     const [toClaim, tokenReward, gemRarirtyTotal] = await calculate(user);
 
     res.status(200).json({
@@ -157,7 +163,6 @@ export const getEarned = async (req, res) => {
 };
 
 async function transfer(user) {
-
   if (user.gems.gemCount == 0) throw new Error("No tokens in vault");
 
   const [toClaim] = await calculate(user);
