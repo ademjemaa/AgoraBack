@@ -1,4 +1,3 @@
-import { type } from "express/lib/response";
 import User from "../models/user.js";
 
 export const getUsers = async (req, res) => {
@@ -38,16 +37,14 @@ export const createUser = async (req, res) => {
         lastStake,
       }));
 
-    if(typeof(User.bank)!= typeof("") || typeof(bank) == typeof("")){
-      user.bank = bank
-      user.vault = vault
+    if (typeof User.bank != typeof "" || typeof bank == typeof "") {
+      user.bank = bank;
+      user.vault = vault;
       const updatedUser = await user.save();
       res.status(201).json(updatedUser);
-    }else{
+    } else {
       res.status(201).json(user);
     }
-
-    
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
@@ -66,8 +63,7 @@ export const updateUserGems = async (req, res) => {
     user.gems.gemTypes.exclusif += gems.gemTypes.exclusif;
     user.gems.gemTypes.premium += gems.gemTypes.premium;
     user.lastStake = new Date();
-    if (user.gems.gemCount <= 0)
-    {
+    if (user.gems.gemCount <= 0) {
       user.gems.gemCount = 0;
       user.gems.gemRarirtyTotal = 0;
       user.gems.gemTypes.standard = 0;

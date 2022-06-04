@@ -1,9 +1,14 @@
 import User from "../models/user.js";
 import Ico from "../models/ICO.js";
 import axios from "axios";
+import * as web3 from "@solana/web3.js";
+
 const coins = Number(process.env.TOTALAGORA);
 import whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
 import _stripe from "stripe";
+
+console.log(web3.clusterApiUrl("mainnet-beta"));
+const connection = new web3.Connection(web3.clusterApiUrl("mainnet-beta"));
 
 const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -19,37 +24,59 @@ const getSolanaPrice = async () =>
 
 export const BuyIco = async (req, res) => {
   const { wallet } = req.params;
-  let { amount, method } = req.body;
+  let { amount, method, signature } = req.body;
 
   try {
-    let sol_price = await getSolanaPrice();
-    if (method == "SOL") {
-      amount = amount * sol_price;
-    }
-    if (whiteList[wallet]) {
-      amount = amount / whiteList[wallet];
-    } else throw new Error("Wallet not whitelisted");
-    const user = await User.findOne({ wallet: wallet });
-    if (!User) throw new Error("user not found");
-
-    if (amount > (await getRemaingingCoins()))
-      throw new Error(
-        "Out of coins or the amount you chose is greater than what we have left"
-      );
-
-    const _ico = await Ico.create({
-      wallet,
-      amount,
-      method,
-    });
-
-    user.IcoBaught += _ico.amount;
-    user.earned += _ico.amount;
-    await user.save();
+    await handleICOPurchase({ wallet, amount, method, signature });
     return res.send("OK");
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
+};
+
+// (async () => {
+//   try {
+//     const {
+//       meta: { postTokenBalances, preTokenBalances },
+//     } = await connection.getTransaction(
+//       "52ofcARBVdX12gqkkdjuM7CGA3xKud2YECh8tRr3oXwxcgpJE3EKtoEEpe9a7DGvhjj3NUZbRsbxJaEH8C3RfuSd"
+//     );
+//   } catch (error) {
+//     console.error(error);
+//   }
+// })();
+
+const handleICOPurchase = async ({ wallet, amount, method, signature }) => {
+  const {
+    value: { err },
+  } = await connection.confirmTransaction(signature, "processed");
+
+  if (err) throw new Error(err);
+
+  let sol_price = await getSolanaPrice();
+  if (method == "SOL") {
+    amount = amount * sol_price;
+  }
+  if (whiteList[wallet]) {
+    amount = amount / whiteList[wallet];
+  } else throw new Error("Wallet not whitelisted");
+  const user = await User.findOne({ wallet: wallet });
+  if (!User) throw new Error("user not found");
+
+  if (amount > (await getRemaingingCoins()))
+    throw new Error(
+      "Out of coins or the amount you chose is greater than what we have left"
+    );
+
+  const _ico = await Ico.create({
+    wallet,
+    amount,
+    method,
+  });
+
+  user.IcoBaught += _ico.amount;
+  user.earned += _ico.amount;
+  await user.save();
 };
 
 export const checkWhiteListed = async (req, res) => {
@@ -80,7 +107,9 @@ const getRemaingingCoins = async () => {
           },
         },
       },
-    ])[0]?.sum) || 0)
+    ])[0]?.sum) ||
+      (await Ico.find()).reduce((prev, cur) => prev + cur.amount, 0) ||
+      0)
   );
 };
 
