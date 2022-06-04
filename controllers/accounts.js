@@ -17,8 +17,8 @@ const NFTImageDict = {
 };
 const NFTWeightDict = {
   Standard: 1,
-  Premium: 3.3,
-  Exclusive: 33.3,
+  Premium: 3.34,
+  Exclusive: 33.334,
 };
 
 const {
@@ -65,13 +65,13 @@ export const getVaultTokens = async (req, res) => {
     for (let i = 0; i < final_tokens.length; i++) {
       const { name } = final_tokens[i].externalMetadata;
       if (name.startsWith("Exclusive")) {
-        user.gems.gemRarirtyTotal += NFTWeightDict.exclusive;
+        user.gems.gemRarirtyTotal += NFTWeightDict.Exclusive;
         user.gems.gemTypes.exclusif += 1;
       } else if (name.startsWith("Premium")) {
-        user.gems += NFTWeightDict.premium;
+        user.gems.gemRarirtyTotal += NFTWeightDict.Premium;
         user.gems.gemTypes.premium += 1;
       } else if (name.startsWith("Standard")) {
-        user.gems += NFTWeightDict.standard;
+        user.gems.gemRarirtyTotal += NFTWeightDict.Standard;
         user.gems.gemTypes.standard += 1;
       }
     }
