@@ -1,3 +1,4 @@
+import { type } from "express/lib/response";
 import User from "../models/user.js";
 
 export const getUsers = async (req, res) => {
@@ -26,7 +27,7 @@ export const createUser = async (req, res) => {
   const { wallet, vault, bank, gems, earned, total, lastStake } = req.body;
   try {
     const user =
-      (await User.findOne({ wallet, vault, bank })) ||
+      (await User.findOne({ wallet })) ||
       (await User.create({
         wallet,
         vault,
@@ -37,7 +38,16 @@ export const createUser = async (req, res) => {
         lastStake,
       }));
 
-    res.status(201).json(user);
+    if(typeof(User.bank)!= typeof("") || typeof(bank) == typeof("")){
+      user.bank = bank
+      user.vault = vault
+      const updatedUser = await user.save();
+      res.status(201).json(updatedUser);
+    }else{
+      res.status(201).json(user);
+    }
+
+    
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
