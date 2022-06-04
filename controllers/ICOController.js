@@ -76,12 +76,15 @@ const handleICOPurchase = async ({
     } = await connection.getTransaction(signature);
     amount =
       postTokenBalances[0].uiTokenAmount.amount -
-      preTokenBalances[0].uiTokenAmount.amount;
+      preTokenBalances[0].uiTokenAmount.amount / 1e6;
     let publicKey = postTokenBalances[1].owner;
     if (wallet != publicKey) throw new Error("Wrong public key");
     let sol_price = await getSolanaPrice();
     if (method == "SOL") {
-      amount = amount * sol_price;
+      if (postTokenBalances.mint == "So11111111111111111111111111111111111111112")
+        amount = amount * sol_price / 1e3;
+      else
+        throw new Error("Wrong mint address");
     }
   } else {
     if (await Ico.findOne({ paymentIntent }))
