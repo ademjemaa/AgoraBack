@@ -6,7 +6,7 @@ import _stripe from "stripe";
 import { createRequire } from "module"; // Bring in the ability to create the 'require' method
 import user from "../models/user.js";
 const require = createRequire(import.meta.url); // construct the require method
-const whiteList = require("../config/ICOWhitelist.json")
+const whiteList = require("../config/ICOWhitelist.json");
 
 const coins = Number(process.env.TOTALAGORA);
 
@@ -33,7 +33,12 @@ export const BuyIco = async (req, res) => {
   let { amount, paymentMethod, signature } = req.body;
 
   try {
-    await handleICOPurchase({ wallet, amount, method : paymentMethod, signature });
+    await handleICOPurchase({
+      wallet,
+      amount,
+      method: paymentMethod,
+      signature,
+    });
     return res.send("OK");
   } catch (error) {
     console.error(error);
@@ -92,8 +97,8 @@ const handleICOPurchase = async ({
   if (method !== "CARD") {
     if (await Ico.findOne({ signature }))
       throw new Error("signature already used");
-    console.log("method " +method);
-    console.log("wallet: "+wallet);
+    console.log("method " + method);
+    console.log("wallet: " + wallet);
 
     let result = null;
     while (result === null) {
@@ -103,16 +108,19 @@ const handleICOPurchase = async ({
     const {
       meta: { postTokenBalances, preTokenBalances, postBalances, preBalances },
     } = result;
-    
-    amount =
-      Math.abs(((method === "SOL"
+
+    amount = Math.abs(
+      ((method === "SOL"
         ? postBalances[0]
         : postTokenBalances[0].uiTokenAmount.amount) -
         (method === "SOL"
           ? preBalances[0]
           : preTokenBalances[0].uiTokenAmount.amount)) /
-      1e6);
-    const accounts = result.transaction.message.accountKeys.map(el => el.toBase58());
+        1e6
+    );
+    const accounts = result.transaction.message.accountKeys.map((el) =>
+      el.toBase58()
+    );
     const publicKey = accounts[0];
     if (wallet != publicKey) throw new Error("Wrong public key");
     let sol_price = await getSolanaPrice();
@@ -128,12 +136,10 @@ const handleICOPurchase = async ({
   amount = amount / 0.013;
   console.log("final tokens " + amount);
   let user = await User.findOne({ wallet });
-  if (!user)
-  {
-    user = await User.create({
-    })
+  if (!user) {
+    user = await User.create({});
     user.wallet = wallet;
-  };
+  }
 
   if (amount > (await getRemaingingCoins()))
     throw new Error(
@@ -146,14 +152,12 @@ const handleICOPurchase = async ({
     method,
     signature,
   });
-  console.log("pre buy user"+user);
+  console.log("pre buy user" + user);
 
-  if (user.icoBaught == null)
-  {
+  if (user.icoBaught == null) {
     user.icoBaught = 0;
   }
-  if (user.icoBaught != null)
-  {
+  if (user.icoBaught != null) {
     user.icoBaught += _ico.amount * 1e6;
   }
   user.earned += _ico.amount * 1e6;
@@ -197,23 +201,30 @@ export const TotalAgoraLeft = async (req, res) => {
   try {
     return res
       .status(200)
-      .json({ left: Math.round((await getRemaingingCoins()) - 20000000), max: coins - 20000000});
+      .json({
+        left: Math.round((await getRemaingingCoins()) - 20000000),
+        max: coins - 20000000,
+      });
   } catch (error) {
     res.status(401).json({ message: error.message });
   }
 };
 
 export const getPaymentIntent = async (req, res) => {
-  const { amount, publicKey } = req.body;
-  if (!publicKey) return res.status(403).send("Public key is required");
+  try {
+    const { amount, publicKey } = req.body;
+    if (!publicKey) return res.status(403).send("Public key is required");
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amount * 100,
-    currency: "usd",
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  });
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100,
+      currency: "usd",
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
-  res.send(paymentIntent.client_secret);
+    res.send(paymentIntent.client_secret);
+  } catch (error) {
+    res.status(401).send({ message: error.message });
+  }
 };
