@@ -27,6 +27,29 @@ const {
 
 let tokenreward = 347.22;
 
+//staking cards stats
+
+(async () => {
+  try {
+    const user = await User.find({});
+
+    let totalgems1 = 0;
+    let totalgems2 = 0;
+    let totalgems3 = 0;
+    for (let i = 0; i < user.length; i++)
+    {
+      totalgems1 += user[i].gems.gemTypes.standard;
+      totalgems2 += user[i].gems.gemTypes.exclusif;
+      totalgems3 += user[i].gems.gemTypes.premium;
+    }
+    console.log("standard cards : " + totalgems1);
+    console.log("exclusif cards : " + totalgems2);
+    console.log("premium cards: " + totalgems3);
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
 export const getTrans = async (req, res) => {
   try {
     const { to } = req.body;

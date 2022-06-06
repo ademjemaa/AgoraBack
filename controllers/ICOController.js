@@ -2,13 +2,18 @@ import User from "../models/user.js";
 import Ico from "../models/ICO.js";
 import axios from "axios";
 import * as web3 from "@solana/web3.js";
-import whiteList from "../config/ICOWhitelist.json" assert { type: "json" };
 import _stripe from "stripe";
+import { createRequire } from "module"; // Bring in the ability to create the 'require' method
+import user from "../models/user.js";
+const require = createRequire(import.meta.url); // construct the require method
+const whiteList = require("../config/ICOWhitelist.json")
 
 const coins = Number(process.env.TOTALAGORA);
 
-const connection = new web3.Connection(web3.clusterApiUrl("mainnet-beta"));
-
+const connection = new web3.Connection(
+  "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/",
+  "confirmed"
+);
 const stripe = _stripe(process.env.STRIPE_SECRET_KEY);
 
 if (!process.env.STRIPE_SECRET_KEY)
@@ -25,12 +30,13 @@ const getSolanaPrice = async () =>
 
 export const BuyIco = async (req, res) => {
   const { wallet } = req.params;
-  let { amount, method, signature } = req.body;
+  let { amount, paymentMethod, signature } = req.body;
 
   try {
-    await handleICOPurchase({ wallet, amount, method, signature });
+    await handleICOPurchase({ wallet, amount, method : paymentMethod, signature });
     return res.send("OK");
   } catch (error) {
+    console.error(error);
     res.status(409).json({ message: error.message });
   }
 };
@@ -51,7 +57,7 @@ export const handleStripeCheckout = async (req, res) => {
     await handleICOPurchase({
       wallet: publicKey,
       amount: amount / 100,
-      method: "FIAT",
+      method: "CARD",
       paymentIntent: payment_intent,
     });
     res.redirect(`${process.env.WEBAPP_HOST}/ico`);
@@ -60,6 +66,22 @@ export const handleStripeCheckout = async (req, res) => {
   }
 };
 
+(async () => {
+  try {
+    // let first = await User.create({
+    // })
+    // first.wallet = "Hx2RwmBnpo77yoWCck1tUvURusnDKMn7qdKmqK2punx3";
+    // await first.save();
+    // const result = await User.findOne({wallet: '6P7cGXDxv1i2JwqJmPdjScZab5ZLTwgPhUiz2qWaHu4p'})
+    // result.icoBaught = 15288 * 1e6;
+    // result.earned = 15288 * 1e6;
+    // await result.save();
+    // console.log(result);
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
 const handleICOPurchase = async ({
   wallet,
   method,
@@ -67,34 +89,51 @@ const handleICOPurchase = async ({
   amount,
   paymentIntent,
 }) => {
-  if (method !== "FIAT") {
+  if (method !== "CARD") {
     if (await Ico.findOne({ signature }))
       throw new Error("signature already used");
+    console.log("method " +method);
+    console.log("wallet: "+wallet);
 
+    let result = null;
+    while (result === null) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      result = await connection.getTransaction(signature);
+    }
     const {
-      meta: { postTokenBalances, preTokenBalances },
-    } = await connection.getTransaction(signature);
+      meta: { postTokenBalances, preTokenBalances, postBalances, preBalances },
+    } = result;
+    
     amount =
-      postTokenBalances[0].uiTokenAmount.amount -
-      preTokenBalances[0].uiTokenAmount.amount / 1e6;
-    let publicKey = postTokenBalances[1].owner;
+      Math.abs(((method === "SOL"
+        ? postBalances[0]
+        : postTokenBalances[0].uiTokenAmount.amount) -
+        (method === "SOL"
+          ? preBalances[0]
+          : preTokenBalances[0].uiTokenAmount.amount)) /
+      1e6);
+    const accounts = result.transaction.message.accountKeys.map(el => el.toBase58());
+    const publicKey = accounts[0];
     if (wallet != publicKey) throw new Error("Wrong public key");
     let sol_price = await getSolanaPrice();
     if (method == "SOL") {
-      if (postTokenBalances.mint == "So11111111111111111111111111111111111111112")
-        amount = amount * sol_price / 1e3;
-      else
-        throw new Error("Wrong mint address");
+      if (accounts[accounts.length - 1] == "11111111111111111111111111111111")
+        amount = (amount * sol_price * 1.1) / 1e3;
+      else throw new Error("Wrong mint address");
     }
   } else {
     if (await Ico.findOne({ paymentIntent }))
       throw new Error("paymentIntent already used");
   }
-  if (whiteList[wallet]) {
-    amount = amount / whiteList[wallet];
-  } else throw new Error("Wallet not whitelisted");
-  const user = await User.findOne({ wallet });
-  if (!User) throw new Error("user not found");
+  amount = amount / 0.013;
+  console.log("final tokens " + amount);
+  let user = await User.findOne({ wallet });
+  if (!user)
+  {
+    user = await User.create({
+    })
+    user.wallet = wallet;
+  };
 
   if (amount > (await getRemaingingCoins()))
     throw new Error(
@@ -107,9 +146,19 @@ const handleICOPurchase = async ({
     method,
     signature,
   });
+  console.log("pre buy user"+user);
 
-  user.icoBaught += _ico.amount * 1e6;
+  if (user.icoBaught == null)
+  {
+    user.icoBaught = 0;
+  }
+  if (user.icoBaught != null)
+  {
+    user.icoBaught += _ico.amount * 1e6;
+  }
   user.earned += _ico.amount * 1e6;
+  console.log(user);
+  console.log(_ico);
   await user.save();
 };
 
@@ -118,9 +167,6 @@ export const checkWhiteListed = async (req, res) => {
 
   let price = 0.013;
   let bol = true;
-  if (whiteList[wallet]) {
-    price = whiteList[wallet];
-  } else bol = false;
   let response = {
     solanaPrice: await getSolanaPrice(),
     price: price,
@@ -151,7 +197,7 @@ export const TotalAgoraLeft = async (req, res) => {
   try {
     return res
       .status(200)
-      .json({ left: await getRemaingingCoins(), max: coins });
+      .json({ left: Math.round((await getRemaingingCoins()) - 20000000), max: coins - 20000000});
   } catch (error) {
     res.status(401).json({ message: error.message });
   }
