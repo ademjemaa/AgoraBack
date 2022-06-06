@@ -70,12 +70,12 @@ export const handleStripeCheckout = async (req, res) => {
   try {
     // let first = await User.create({
     // })
-    // first.wallet = "Hx2RwmBnpo77yoWCck1tUvURusnDKMn7qdKmqK2punx3";
+    // first.wallet = "8aZZdRXGxbXuSaU9bgBMyMjKR9g1CM8YpzWUaLF7S4iL";
     // await first.save();
-    // const result = await User.findOne({wallet: '6P7cGXDxv1i2JwqJmPdjScZab5ZLTwgPhUiz2qWaHu4p'})
+    // const result = await User.findOne({wallet: '8aZZdRXGxbXuSaU9bgBMyMjKR9g1CM8YpzWUaLF7S4iL'})
     // result.icoBaught = 15288 * 1e6;
     // result.earned = 15288 * 1e6;
-    // await result.save();
+    // await result.delete();
     // console.log(result);
   } catch (error) {
     console.error(error);
