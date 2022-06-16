@@ -36,16 +36,13 @@ let tokenreward = 347.22;
 //     let totalgems1 = 0;
 //     let totalgems2 = 0;
 //     let totalgems3 = 0;
-//     let achwa = 0;
-//     for (let i = 0; i < user.length; i++)
+//     let i = 0;
+//     for (i = 0; i < user.length; i++)
 //     {
-//       totalgems1 += user[i].gems.gemTypes.standard;
-//       totalgems2 += user[i].gems.gemTypes.exclusif;
-//       totalgems3 += user[i].gems.gemTypes.premium;
+//       totalgems1 += user[i].earned;
 //     }
 //     console.log("standard cards : " + totalgems1);
-//     console.log("exclusif cards : " + totalgems2);
-//     console.log("premium cards: " + totalgems3);
+//     console.log(totalgems1 / i);
 //   } catch (error) {
 //     console.error(error);
 //   }

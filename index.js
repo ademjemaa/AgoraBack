@@ -8,6 +8,7 @@ import cors from "cors";
 import userRoutes from "./routes/users.js";
 import icoRoutes from "./routes/ico.js";
 import accRoutes from "./routes/account.js";
+import upgradeRoutes from "./routes/upgrade.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use("/users", userRoutes);
 app.use("/account", accRoutes);
 app.use("/ico", icoRoutes);
+app.use("/upgrade", upgradeRoutes);
 
 const CONNECTION_URL =
   process.env.DBURL ||

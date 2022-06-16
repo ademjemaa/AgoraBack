@@ -1,8 +1,10 @@
 import axios from "axios";
 import User from "../models/user.js";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
+import Wave from "../models/wave.js";
 import * as web3 from "@solana/web3.js";
-const { PublicKey } = require('@solana/web3.js');
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK('dd9892506546216c7b0b', 'ca789c941b9b82210d948d38a611dd79ec69bde59650d08acef0f3974934fcbf');
 
@@ -18,6 +20,49 @@ const connection = new web3.Connection(
     "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/",
     "confirmed"
   );
+
+//a function that creates a new wave objects with the body of the request and returns the new wave in the response
+export const CreateWave = async(req, res) => {
+  try {
+    const { start, end, premLimit, standLimit, premPrice, standPrice } = req.body;
+    const wave = await Wave.create({
+      start,
+      end,
+      premLimit,
+      standLimit,
+      premPrice,
+      standPrice
+    });
+    res.send(wave);
+  } catch (error) {
+    console.error(error);
+    res.status(409).json({ message: error.message });
+  }
+}
+
+export const getWaveStats = async (req, res) => {
+  let currentDate = new Date();
+  //get wave where currentDate is bigger than start and smaller than end
+  let wave = await Wave.findOne({
+    start: { $lte: currentDate },
+    end: { $gte: currentDate }
+  });
+  if (wave) {
+    let stats = {
+      premLimit: wave.premLimit,
+      standLimit: wave.standLimit,
+      premPrice: wave.premPrice,
+      standPrice: wave.standPrice,
+      start: wave.start,
+      end: wave.end
+    };
+    res.status(200).send(stats);
+  } else {
+    res.status(400).send("No wave found");
+  }
+}
+
+
 export const UpgradeNFT = async (req, res) => {
     const { wallet } = req.params;
     let { account } = req.body;
@@ -28,7 +73,7 @@ export const UpgradeNFT = async (req, res) => {
           user = await User.create({});
           user.wallet = wallet;
         }
-        ChangeMetadata(account);
+        ChangeMetadata(account, user);
       return res.send("OK");
     } catch (error) {
       console.error(error);
@@ -36,26 +81,38 @@ export const UpgradeNFT = async (req, res) => {
     }
   };
 
-const ChangeMetadata = async({account}) => {
+const ChangeMetadata = async({account, user}) => {
+  try {
     let mintPubkey = new web3.PublicKey(account);
     let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
+    const currentDate = new Date();
     let type;
     let name;
     let image;
+    let wave = await Wave.findOne({
+      start: { $lte: currentDate },
+      end: { $gte: currentDate }
+    });
     const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
     console.log(tokenmeta.data.data.name.indexOf("access", 0));
     if (!tokenmeta.data.data.name.indexOf("Premium", 0))
     {
       type = "Exclusive ";
+      if (wave.premPrice > user.earned)
+        throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
+      user.earned -= wave.premPrice;
     }
     else if (!tokenmeta.data.data.name.indexOf("Standard", 0))
     {
       type = "Premium ";
+      if (wave.standPrice > user.earned)
+        throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
+      user.earned -= wave.standPrice;
     }
     name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
-    let number = tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1);
+    let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
     console.log(number);
     const body = {
       "name":name,
@@ -79,10 +136,13 @@ const ChangeMetadata = async({account}) => {
             cidVersion: 0
         }
       };
-      pinata.pinJSONToIPFS(body, options).then((result) => {
-      console.log(result);
-      
-      }).catch((err) => {
-        console.log(err);
-      });
+    const result = await pinata.pinJSONToIPFS(body, options)
+    console.log(result);
+    await execPromise(`metaboss update uri --account ${account} --keypair ${process.env.KEY_PATH} --new-uri "https://tlbc.mypinata.cloud/ipfs/${result.IpfsHash}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
+    await execPromise(`metaboss update name --account ${account} --keypair ${process.env.KEY_PATH} --new-name "${name}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
+    console.log("done");
+    await user.save();
+  } catch (error) {
+    console.error(error)
+  }
 };
