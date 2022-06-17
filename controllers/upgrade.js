@@ -4,6 +4,7 @@ import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import Wave from "../models/wave.js";
 import * as web3 from "@solana/web3.js";
 import { createRequire } from "module";
+import {exec} from "child_process";
 const require = createRequire(import.meta.url);
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK('dd9892506546216c7b0b', 'ca789c941b9b82210d948d38a611dd79ec69bde59650d08acef0f3974934fcbf');
@@ -40,6 +41,10 @@ export const CreateWave = async(req, res) => {
   }
 }
 
+(async () => {
+  
+})();
+
 export const getWaveStats = async (req, res) => {
   let currentDate = new Date();
   //get wave where currentDate is bigger than start and smaller than end
@@ -47,6 +52,11 @@ export const getWaveStats = async (req, res) => {
     start: { $lte: currentDate },
     end: { $gte: currentDate }
   });
+  // wave.premPrice = 67000;
+  // wave.standPrice = 8000;
+  // wave.premLimit = 1;
+  // wave.standLimit = 9;
+  // await wave.save();
   if (wave) {
     let stats = {
       premLimit: wave.premLimit,
@@ -62,18 +72,29 @@ export const getWaveStats = async (req, res) => {
   }
 }
 
+const execPromise = (command) =>
+  new Promise((resolve, reject) => {
+    exec(command, (err, stdout) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
 
 export const UpgradeNFT = async (req, res) => {
     const { wallet } = req.params;
-    let { account } = req.body;
-    
+    const { account } = req.body;
+    console.log(account);
+    console.log(req.body);
     try {
         let user = await User.findOne({ wallet });
         if (!user) {
           user = await User.create({});
           user.wallet = wallet;
         }
-        ChangeMetadata(account, user);
+        await ChangeMetadata(account, user);
       return res.send("OK");
     } catch (error) {
       console.error(error);
@@ -81,8 +102,8 @@ export const UpgradeNFT = async (req, res) => {
     }
   };
 
-const ChangeMetadata = async({account, user}) => {
-  try {
+const ChangeMetadata = async(account, user) => {
+    console.log(account);
     let mintPubkey = new web3.PublicKey(account);
     let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
     const currentDate = new Date();
@@ -94,7 +115,6 @@ const ChangeMetadata = async({account, user}) => {
       end: { $gte: currentDate }
     });
     const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
-    console.log(tokenmeta.data.data.name.indexOf("access", 0));
     if (!tokenmeta.data.data.name.indexOf("Premium", 0))
     {
       type = "Exclusive ";
@@ -103,7 +123,7 @@ const ChangeMetadata = async({account, user}) => {
       if (wave.premPrice > user.earned)
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
-      user.earned -= wave.premPrice;
+      user.earned -= wave.premPrice * 1e6;
       user.burned += wave.premPrice;
       wave.premLimit--;
       await wave.save();
@@ -116,7 +136,7 @@ const ChangeMetadata = async({account, user}) => {
       if (wave.standPrice > user.earned)
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
-      user.earned -= wave.standPrice;
+      user.earned -= wave.standPrice * 1e6;
       user.burned += wave.standPrice;
       wave.standLimit--;
       await wave.save();
@@ -152,7 +172,4 @@ const ChangeMetadata = async({account, user}) => {
     await execPromise(`metaboss update name --account ${account} --keypair ${process.env.KEY_PATH} --new-name "${name}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
     console.log("done");
     await user.save();
-  } catch (error) {
-    console.error(error)
-  }
 };
