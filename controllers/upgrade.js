@@ -98,20 +98,28 @@ const ChangeMetadata = async({account, user}) => {
     if (!tokenmeta.data.data.name.indexOf("Premium", 0))
     {
       type = "Exclusive ";
+      if (wave.premLimit == 0)
+        throw new Error("Not more Premium upgrades available in current wave");
       if (wave.premPrice > user.earned)
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
       user.earned -= wave.premPrice;
       user.burned += wave.premPrice;
+      wave.premLimit--;
+      await wave.save();
     }
     else if (!tokenmeta.data.data.name.indexOf("Standard", 0))
     {
       type = "Premium ";
+      if (wave.standLimit == 0)
+        throw new Error("Not more Standard upgrades available in current wave");
       if (wave.standPrice > user.earned)
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
       user.earned -= wave.standPrice;
       user.burned += wave.standPrice;
+      wave.standLimit--;
+      await wave.save();
     }
     name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
     let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
