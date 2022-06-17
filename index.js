@@ -9,6 +9,7 @@ import userRoutes from "./routes/users.js";
 import icoRoutes from "./routes/ico.js";
 import accRoutes from "./routes/account.js";
 import upgradeRoutes from "./routes/upgrade.js";
+import dashboardRoutes from "./routes/dashboard.js";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use("/users", userRoutes);
 app.use("/account", accRoutes);
 app.use("/ico", icoRoutes);
 app.use("/upgrade", upgradeRoutes);
+app.use("/dashboard", dashboardRoutes);
 
 const CONNECTION_URL =
   process.env.DBURL ||

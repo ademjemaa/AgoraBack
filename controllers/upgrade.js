@@ -102,6 +102,7 @@ const ChangeMetadata = async({account, user}) => {
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
       user.earned -= wave.premPrice;
+      user.burned += wave.premPrice;
     }
     else if (!tokenmeta.data.data.name.indexOf("Standard", 0))
     {
@@ -110,6 +111,7 @@ const ChangeMetadata = async({account, user}) => {
         throw new Error("Not enough tokens");
       image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
       user.earned -= wave.standPrice;
+      user.burned += wave.standPrice;
     }
     name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
     let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))

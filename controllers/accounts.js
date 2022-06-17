@@ -27,26 +27,6 @@ const {
 
 let tokenreward = 347.22;
 
-//staking cards stats
-
-// (async () => {
-//   try {
-//     const user = await User.find({});
-
-//     let totalgems1 = 0;
-//     let totalgems2 = 0;
-//     let totalgems3 = 0;
-//     let i = 0;
-//     for (i = 0; i < user.length; i++)
-//     {
-//       totalgems1 += user[i].earned;
-//     }
-//     console.log("standard cards : " + totalgems1);
-//     console.log(totalgems1 / i);
-//   } catch (error) {
-//     console.error(error);
-//   }
-// })();
 
 export const getTrans = async (req, res) => {
   try {
@@ -103,19 +83,6 @@ export const getVaultTokens = async (req, res) => {
   }
 };
 
-// async function calculate(user){
-//   if (user.gems.gemCount == 0)
-//     return ;
-//   let now = new Date().getTime();
-//   let time = now - user.lastStake.getTime();
-//   let amount = tokenreward * user.gems.gemRarirtyTotal * time;
-//   user.lastStake = now;
-//   user.earned += amount;
-//   console.log(user.earned);
-//   await user.save();
-//   console.log("user stats " + user);
-//   return [user.earned,tokenreward,user.gems.gemRarirtyTotal];
-// }
 
 async function calculate(user) {
   const now = new Date().getTime();
@@ -127,24 +94,6 @@ async function calculate(user) {
   return [updatedUser.earned, tokenreward, updatedUser.gems.gemRarirtyTotal];
 }
 
-/**
- * async function transfer(addr) {
-
-  calculate(addr);
-  if (addr.gems.gemCount == 0)
-    return ;
-  let to = addr.wallet;
-  let amount = addr.earned;
-  const mintPublicKey = new web3.PublicKey(tokenMintAddress);   
-
-  console.log(mintPublicKey);
-  const mint = await getMint(connection, mintPublicKey, splToken.TOKEN_PROGRAM_ID);
-  console.log(mint);
-
-  const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
-    mint : mint.address
-  })
- */
 
 export const getEarned = async (req, res) => {
   try {
@@ -177,75 +126,6 @@ async function transfer(user) {
 
   let to = user.wallet;
   let amount = Number(parseInt(user.earned));
-  // const mintPublicKey = new web3.PublicKey(tokenMintAddress);
-
-  // const mint = await getMint(
-  //   connection,
-  //   mintPublicKey,
-  //   splToken.TOKEN_PROGRAM_ID
-  // );
-
-  // const res = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {
-  //   mint: mint.address,
-  // });
-
-  // const associatedDestinationTokenAddr =
-  //   await splToken.getAssociatedTokenAddress(
-  //     mint.address,
-  //     new web3.PublicKey(to)
-  //   );
-  // const receiverAccount = await connection.getAccountInfo(
-  //   associatedDestinationTokenAddr
-  // );
-  // const instructions = [];
-  // if (receiverAccount == null)
-  //   instructions.push(
-  //     splToken.createAssociatedTokenAccountInstruction(
-  //       fromWallet.publicKey,
-  //       associatedDestinationTokenAddr,
-  //       new web3.PublicKey(to),
-  //       mint.address
-  //     )
-  //   );
-  // else {
-  //   const account = await splToken.getAccount(
-  //     connection,
-  //     associatedDestinationTokenAddr
-  //   );
-  //   if (account.isFrozen == true)
-  //     instructions.push(
-  //       splToken.createThawAccountInstruction(
-  //         associatedDestinationTokenAddr,
-  //         mint.address,
-  //         fromWallet.publicKey,
-  //         [fromWallet]
-  //       )
-  //     );
-  // }
-  // instructions.push(
-  //   splToken.createTransferInstruction(
-  //     res.value[0].pubkey,
-  //     associatedDestinationTokenAddr,
-  //     fromWallet.publicKey,
-  //     amount,
-  //     [fromWallet]
-  //   )
-  // );
-  // if (user.wallet != "4WVgoXKa1u8SGz1aHJPsKRsEEYXJVsZEBazh2a9JkwYj")
-  // instructions.push(
-  //   splToken.createFreezeAccountInstruction(
-  //     associatedDestinationTokenAddr,
-  //     mint.address,
-  //     fromWallet.publicKey,
-  //     [fromWallet]
-  //   )
-  // );
-  // const transaction = new web3.Transaction().add(...instructions);
-  // const signature = await web3.sendAndConfirmTransaction(
-  //   connection,
-  //   transaction,
-  //   [fromWallet]
-  // );
 
   user.earned = 0;
   user.total += toClaim;

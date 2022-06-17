@@ -4,6 +4,7 @@ const userSchema = mongoose.Schema({
   wallet: String,
   bank: String,
   vault: String,
+  burned: { type: Number, default: 0 },
   earned: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
   icoBaught : { type : Number, default: 0},
