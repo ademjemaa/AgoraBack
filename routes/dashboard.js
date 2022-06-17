@@ -1,8 +1,8 @@
 import express from "express";
-import {getGemCount} from "../controllers/dashboard.js"
+import {getStats} from "../controllers/dashboard.js"
 
 const router = express.Router();
 
-router.get("/", getGemCount);
+router.get("/", getStats);
 
 export default router;
