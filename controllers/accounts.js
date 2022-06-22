@@ -17,7 +17,7 @@ const NFTImageDict = {
 };
 const NFTWeightDict = {
   Standard: 1,
-  Premium: 3.34,
+  Premium: 3.4,
   Exclusive: 33.334,
 };
 
@@ -168,7 +168,7 @@ async function getNFTMetadata(
       externalMetadata,
     };
   } catch (e) {
-    console.log(`failed to pull metadata for token ${mint}`);
+
   }
 }
 

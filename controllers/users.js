@@ -63,7 +63,7 @@ export const updateUserGems = async (req, res) => {
     user.gems.gemTypes.exclusif += gems.gemTypes.exclusif;
     user.gems.gemTypes.premium += gems.gemTypes.premium;
     user.lastStake = new Date();
-    if (user.gems.gemCount <= 0) {
+    if (user.gems.gemCount <= 0 || user.gems.gemRarirtyTotal <= 0) {
       user.gems.gemCount = 0;
       user.gems.gemRarirtyTotal = 0;
       user.gems.gemTypes.standard = 0;
