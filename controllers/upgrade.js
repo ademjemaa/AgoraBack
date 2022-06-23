@@ -1,14 +1,21 @@
 import axios from "axios";
 import User from "../models/user.js";
+import Upgrade from "../models/upgrade.js";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import Wave from "../models/wave.js";
 import * as web3 from "@solana/web3.js";
 import { createRequire } from "module";
 import { exec } from "child_process";
+import { token } from "@project-serum/anchor/dist/cjs/utils/index.js";
+import wave from "../models/wave.js";
 const require = createRequire(import.meta.url);
+var fs = require('fs');
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK('dd9892506546216c7b0b', 'ca789c941b9b82210d948d38a611dd79ec69bde59650d08acef0f3974934fcbf');
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 pinata.testAuthentication().then((result) => {
   //handle successful authentication here
@@ -43,13 +50,19 @@ export const CreateWave = async (req, res) => {
 
 (async () => {
   //find user that has wallet value F5ws94jPuQbEbpxMiGLLXFppaTjVBmGdJvobfUAah3Qi
-  const user = await User.findOne({
-      wallet: "BpQKPmzoEYiD4sNxzXjuLS6HzmVQg2CQLLtmVUWM15gh"
-  });
+  const tokens = await Upgrade.deleteOne({
+    account : "CYXxEsNhLHWimv4DVY3KBmYURnewhB8PRu3NKFo3tLjN"
+});
+  const wave = await Wave.findOne({})
+  wave.premLimit = 1;
+  await wave.save();
   // user.earned += 1231 * 1e6;
   // user.burned += 8000;
   // await user.save();
-  console.log(user);
+  // console.log(tokens);
+  // await Upgrade.deleteOne({
+  //   account: "CYXxEsNhLHWimv4DVY3KBmYURnewhB8PRu3NKFo3tLjN"
+  // });
   // const wave = await User.findOne({});
   // console.log(wave);
   // const start = 1655564400000;
@@ -79,8 +92,6 @@ export const getWaveStats = async (req, res) => {
   }
 }
 
-
-
 const execPromise = (command) =>
   new Promise((resolve, reject) => {
     exec(command, (err, stdout) => {
@@ -100,8 +111,12 @@ export const UpgradeNFT = async (req, res) => {
   try {
     let user = await User.findOne({ wallet });
     if (!user) {
-      user = await User.create({});
-      user.wallet = wallet;
+      user = await User.create({
+        wallet : wallet,
+      earned : 0,
+      burned : 0,
+      icoBaught : 0
+      });
     }
     await ChangeMetadata(account, user);
     return res.send("OK");
@@ -123,7 +138,14 @@ const ChangeMetadata = async (account, user) => {
     start: { $lte: currentDate },
     end: { $gte: currentDate }
   });
-  const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
+  let token = await Upgrade.findOne({ account });
+  if (token)
+    throw new Error("token upgrade already in progress, please wait for the upgrade to finish or choose another token");
+  console.log("wave " + wave);
+  if (!wave)
+    throw new Error("no wave found");
+    const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
+    console.log(tokenmeta.data.data);
   if (!tokenmeta.data.data.name.indexOf("Premium", 0)) {
     type = "Exclusive ";
     if (wave.premLimit == 0)
@@ -148,7 +170,16 @@ const ChangeMetadata = async (account, user) => {
     wave.standLimit--;
     await wave.save();
   }
+  if (!token)
+  {
+    token = await Upgrade.create({
+      wallet : user.wallet,
+      account : account,
+    })
+  }
   name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
+  token.name = name;
+  token.status = 0;
   let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
   console.log(number);
   const body = {
@@ -176,9 +207,56 @@ const ChangeMetadata = async (account, user) => {
     }
   };
   const result = await pinata.pinJSONToIPFS(body, options)
-  console.log(result);
-  await execPromise(`metaboss update uri --account ${account} --keypair ${process.env.KEY_PATH} --new-uri "https://tlbc.mypinata.cloud/ipfs/${result.IpfsHash}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
-  await execPromise(`metaboss update name --account ${account} --keypair ${process.env.KEY_PATH} --new-name "${name}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
-  console.log("done");
+  token.uri = "https://tlbc.mypinata.cloud/ipfs/" + result.IpfsHash;
+  await token.save();
   await user.save();
+  createJson(number, account, token);
+  console.log(result);
+  // await execPromise(`metaboss update uri --account ${account} --keypair ${process.env.KEY_PATH} --new-uri "https://tlbc.mypinata.cloud/ipfs/${result.IpfsHash}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
+  // await execPromise(`metaboss update name --account ${account} --keypair ${process.env.KEY_PATH} --new-name "${name}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
+  // console.log("done");
 };
+
+//function that takes a name and uri, creates a json file with said name and uri and a field for symbol and creator
+const createJson = async(number, account, token) => {
+  const final_json = {
+    "name": token.name,
+    "symbol": "ATLBC",
+    "uri": token.uri,
+    "seller_fee_basis_points": 500,
+    "creators": [
+        {
+        "address": "EXBwPeWBeJc1hkupb3cCjnQ7Tr3Q4DN9BF2WheQPFwci",
+        "verified": true,
+        "share": 0
+      },
+      {
+        "address": "4KfCr7GQewMMc2xZGz8YSpWJy6PkJdTWhzEAsRboVxe6",
+        "verified": false,
+        "share": 100
+      }
+    ]
+}
+const file_name = number + ".json";
+token.file = file_name;
+await token.save();
+fs.writeFile('../json/' + file_name, JSON.stringify(final_json), function (err) {
+  if (err) throw err;
+  console.log('Saved!');
+});
+await execPromise(`/home/adam/.cargo/bin/metaboss update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+console.log(final_json);
+verifyUpgrade(account, token);
+}
+
+const verifyUpgrade = async(account, token) => {
+  sleep(60 * 1000);
+  let mintPubkey = new web3.PublicKey(account);
+  let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
+  const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
+  console.log(tokenmeta.data.data);
+  if (tokenmeta.data.data.name == token.name)
+    console.log("upgrade done");
+  else
+    await execPromise(`/home/adam/.cargo/bin/metaboss update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${token.file} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+}
