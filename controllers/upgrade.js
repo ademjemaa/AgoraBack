@@ -49,25 +49,6 @@ export const CreateWave = async (req, res) => {
 }
 
 (async () => {
-  //find user that has wallet value F5ws94jPuQbEbpxMiGLLXFppaTjVBmGdJvobfUAah3Qi
-  const tokens = await Upgrade.deleteOne({
-    account : "CYXxEsNhLHWimv4DVY3KBmYURnewhB8PRu3NKFo3tLjN"
-});
-  const wave = await Wave.findOne({})
-  wave.premLimit = 1;
-  await wave.save();
-  // user.earned += 1231 * 1e6;
-  // user.burned += 8000;
-  // await user.save();
-  // console.log(tokens);
-  // await Upgrade.deleteOne({
-  //   account: "CYXxEsNhLHWimv4DVY3KBmYURnewhB8PRu3NKFo3tLjN"
-  // });
-  // const wave = await User.findOne({});
-  // console.log(wave);
-  // const start = 1655564400000;
-  // wave.start = start;
-  // await wave.save();
 })();
 
 export const getWaveStats = async (req, res) => {
@@ -106,16 +87,14 @@ const execPromise = (command) =>
 export const UpgradeNFT = async (req, res) => {
   const { wallet } = req.params;
   const { account } = req.body;
-  console.log(account);
-  console.log(req.body);
   try {
     let user = await User.findOne({ wallet });
     if (!user) {
       user = await User.create({
         wallet : wallet,
-      earned : 0,
-      burned : 0,
-      icoBaught : 0
+        earned : 0,
+        burned : 0,
+        icoBaught : 0
       });
     }
     await ChangeMetadata(account, user);
@@ -128,6 +107,7 @@ export const UpgradeNFT = async (req, res) => {
 
 const ChangeMetadata = async (account, user) => {
   console.log(account);
+  console.log(user);
   let mintPubkey = new web3.PublicKey(account);
   let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
   const currentDate = new Date();
@@ -144,13 +124,15 @@ const ChangeMetadata = async (account, user) => {
   console.log("wave " + wave);
   if (!wave)
     throw new Error("no wave found");
-    const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
-    console.log(tokenmeta.data.data);
+  const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
+  console.log(tokenmeta.data.data);
+  if (!tokenmeta.data.data.name.indexOf("Exclusive", 0))
+    throw new Error("Cannot upgrade Exclusive tokens yet, please choose another tier");
   if (!tokenmeta.data.data.name.indexOf("Premium", 0)) {
     type = "Exclusive ";
     if (wave.premLimit == 0)
       throw new Error("Not more Premium upgrades available in current wave");
-    if (wave.premPrice > user.earned)
+    if (wave.premPrice * 1e6 > user.earned || typeof user.earned === 'undefined')
       throw new Error("Not enough tokens");
     image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
     user.earned -= wave.premPrice * 1e6;
@@ -162,7 +144,7 @@ const ChangeMetadata = async (account, user) => {
     type = "Premium ";
     if (wave.standLimit == 0)
       throw new Error("Not more Standard upgrades available in current wave");
-    if (wave.standPrice > user.earned)
+    if (wave.standPrice * 1e6 > user.earned)
       throw new Error("Not enough tokens");
     image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
     user.earned -= wave.standPrice * 1e6;
@@ -179,7 +161,6 @@ const ChangeMetadata = async (account, user) => {
   }
   name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
   token.name = name;
-  token.status = 0;
   let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
   console.log(number);
   const body = {
@@ -208,13 +189,11 @@ const ChangeMetadata = async (account, user) => {
   };
   const result = await pinata.pinJSONToIPFS(body, options)
   token.uri = "https://tlbc.mypinata.cloud/ipfs/" + result.IpfsHash;
+  console.log("user post upgrade : " + user);
   await token.save();
   await user.save();
   createJson(number, account, token);
   console.log(result);
-  // await execPromise(`metaboss update uri --account ${account} --keypair ${process.env.KEY_PATH} --new-uri "https://tlbc.mypinata.cloud/ipfs/${result.IpfsHash}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
-  // await execPromise(`metaboss update name --account ${account} --keypair ${process.env.KEY_PATH} --new-name "${name}" -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1 -T 9000`);
-  // console.log("done");
 };
 
 //function that takes a name and uri, creates a json file with said name and uri and a field for symbol and creator
@@ -244,7 +223,7 @@ fs.writeFile('../json/' + file_name, JSON.stringify(final_json), function (err) 
   if (err) throw err;
   console.log('Saved!');
 });
-await execPromise(`/home/adam/.cargo/bin/metaboss update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
 console.log(final_json);
 verifyUpgrade(account, token);
 }
@@ -256,7 +235,15 @@ const verifyUpgrade = async(account, token) => {
   const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
   console.log(tokenmeta.data.data);
   if (tokenmeta.data.data.name == token.name)
-    console.log("upgrade done");
+  {
+    await Upgrade.deleteOne({
+      account : account
+    });
+    console.log("upgrade done for token : " + account);
+  }
   else
-    await execPromise(`/home/adam/.cargo/bin/metaboss update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${token.file} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+  {
+    console.log("awaiting upgrade for token : " + account);
+    await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${token.file} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+  }
 }
