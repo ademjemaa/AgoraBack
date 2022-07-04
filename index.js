@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+import { createRequire } from "module";
 import cors from "cors";
 
 import userRoutes from "./routes/users.js";
@@ -10,6 +11,10 @@ import icoRoutes from "./routes/ico.js";
 import accRoutes from "./routes/account.js";
 import upgradeRoutes from "./routes/upgrade.js";
 import dashboardRoutes from "./routes/dashboard.js";
+
+const require = createRequire(import.meta.url);
+const { MongoClient } = require('mongodb');
+
 
 const app = express();
 
@@ -29,11 +34,14 @@ const CONNECTION_URL =
 
 const PORT = process.env.PORT;
 
-mongoose
-  .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() =>
-    app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`))
-  )
-  .catch(() => console.log("launch error, probably ip address on mongo db"));
+// export var client = mongoose
+//   .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+//   .then(() =>
+//     app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`))
+//   )
+//   .catch(() => console.log("launch error, probably ip address on mongo db"));
+
+export var client = await MongoClient.connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`));
 
 // mongoose.set("useFindAndModify", false);

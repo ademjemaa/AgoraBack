@@ -8,14 +8,29 @@ import { createRequire } from "module";
 import { exec } from "child_process";
 import { token } from "@project-serum/anchor/dist/cjs/utils/index.js";
 import wave from "../models/wave.js";
+import { client } from "../index.js";
 const require = createRequire(import.meta.url);
 var fs = require('fs');
+const { MongoClient } = require('mongodb');
+const bcrypt = require('bcrypt');
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK('dd9892506546216c7b0b', 'ca789c941b9b82210d948d38a611dd79ec69bde59650d08acef0f3974934fcbf');
+const CONNECTION_URL =
+  "mongodb+srv://Daraos:xSJbu0kArQHSApj5@cluster0.tgecm.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+  const options = { useNewUrlParser: true, replicaSet: 'rs' };
+
+const passwordInPlaintext = ')4yga#A^4<`p<j]m';
+const hash = await bcrypt.hash(passwordInPlaintext, 10);
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+const transactionOptions = {
+  readPreference: 'primary',
+  readConcern: { level: 'local' },
+  writeConcern: { w: 'majority' }
+};
 
 pinata.testAuthentication().then((result) => {
   //handle successful authentication here
@@ -32,16 +47,28 @@ const connection = new web3.Connection(
 //a function that creates a new wave objects with the body of the request and returns the new wave in the response
 export const CreateWave = async (req, res) => {
   try {
-    const { start, end, premLimit, standLimit, premPrice, standPrice } = req.body;
-    const wave = await Wave.create({
-      start,
-      end,
-      premLimit,
-      standLimit,
-      premPrice,
-      standPrice
-    });
+    let match = false;
+    let wave;
+    const { start, end, premLimit, standLimit, premPrice, standPrice, password } = req.body;
+
+    const pass = await bcrypt.hash(password, 10);
+    const isPasswordMatching = await bcrypt.compare(password, hash);
+    if (isPasswordMatching)
+      match = true;
+    if (match)
+    {
+        wave = await Wave.create({
+        start,
+        end,
+        premLimit,
+        standLimit,
+        premPrice,
+        standPrice
+      });
     res.send(wave);
+    }
+    else
+      throw new Error("password doesnt match");
   } catch (error) {
     console.error(error);
     res.status(409).json({ message: error.message });
@@ -52,13 +79,25 @@ export const CreateWave = async (req, res) => {
 })();
 
 export const getWaveStats = async (req, res) => {
-  let currentDate = new Date();
+  let currentDate = new Date().getTime();
+  var wave;
+  const session = await client.startSession();
+  
+  try {
   //get wave where currentDate is bigger than start and smaller than end
-  let wave = await Wave.findOne({
-    start: { $lte: currentDate },
-    end: { $gte: currentDate }
-  });
+  const transactionResults = await session.withTransaction(async () => { 
+            
+    const waveCollection = client.db('myFirstDatabase').collection('waveschemas');
+
+   
+    wave = await waveCollection.findOne({
+          start: { $lte: currentDate },
+      end: { $gte: currentDate } 
+    });
+    }, transactionOptions);
+    console.log(transactionResults);
   if (wave) {
+    console.log(wave);
     let stats = {
       premLimit: wave.premLimit,
       standLimit: wave.standLimit,
@@ -67,10 +106,16 @@ export const getWaveStats = async (req, res) => {
       start: wave.start,
       end: wave.end
     };
+
     res.status(200).send(stats);
+    session.endSession();
+  
   } else {
     res.status(400).send("No wave found");
   }
+} finally {
+  session.endSession(); 
+}
 }
 
 const execPromise = (command) =>
@@ -87,8 +132,16 @@ const execPromise = (command) =>
 export const UpgradeNFT = async (req, res) => {
   const { wallet } = req.params;
   const { account } = req.body;
+  let user;
+  const tokenCollection = await client.db('myFirstDatabase').collection('upgrademodels');
+  const tokens = await tokenCollection.deleteMany({});
+  const session = await client.startSession();
   try {
-    let user = await User.findOne({ wallet });
+    const transactionResults = await session.withTransaction(async () => { 
+      const Collection = client.db('myFirstDatabase').collection('usermodels');
+      user = await Collection.findOne({ wallet });
+      }, transactionOptions);
+    console.log(user);
     if (!user) {
       user = await User.create({
         wallet : wallet,
@@ -96,112 +149,145 @@ export const UpgradeNFT = async (req, res) => {
         burned : 0,
         icoBaught : 0
       });
+      await user.save();
     }
-    await ChangeMetadata(account, user);
+    await ChangeMetadata(account, user, session);
     return res.send("OK");
   } catch (error) {
     console.error(error);
     res.status(409).json({ message: error.message });
   }
+ finally {
+  session.endSession(); 
+}
 };
 
-const ChangeMetadata = async (account, user) => {
+const ChangeMetadata = async (account, user, session) => {
   console.log(account);
   console.log(user);
+
+  const wallet = user.wallet;
   let mintPubkey = new web3.PublicKey(account);
   let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
-  const currentDate = new Date();
   let type;
   let name;
   let image;
-  let wave = await Wave.findOne({
-    start: { $lte: currentDate },
-    end: { $gte: currentDate }
-  });
-  let token = await Upgrade.findOne({ account });
-  if (token)
-    throw new Error("token upgrade already in progress, please wait for the upgrade to finish or choose another token");
-  console.log("wave " + wave);
-  if (!wave)
-    throw new Error("no wave found");
-  const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
-  console.log(tokenmeta.data.data);
-  if (!tokenmeta.data.data.name.indexOf("Exclusive", 0))
-    throw new Error("Cannot upgrade Exclusive tokens yet, please choose another tier");
-  if (!tokenmeta.data.data.name.indexOf("Premium", 0)) {
-    type = "Exclusive ";
-    if (wave.premLimit == 0)
-      throw new Error("Not more Premium upgrades available in current wave");
-    if (wave.premPrice * 1e6 > user.earned || typeof user.earned === 'undefined')
-      throw new Error("Not enough tokens");
-    image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
-    user.earned -= wave.premPrice * 1e6;
-    user.burned += wave.premPrice;
-    wave.premLimit--;
-    await wave.save();
-  }
-  else if (!tokenmeta.data.data.name.indexOf("Standard", 0)) {
-    type = "Premium ";
-    if (wave.standLimit == 0)
-      throw new Error("Not more Standard upgrades available in current wave");
-    if (wave.standPrice * 1e6 > user.earned)
-      throw new Error("Not enough tokens");
-    image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
-    user.earned -= wave.standPrice * 1e6;
-    user.burned += wave.standPrice;
-    wave.standLimit--;
-    await wave.save();
-  }
-  if (!token)
-  {
-    token = await Upgrade.create({
-      wallet : user.wallet,
-      account : account,
-    })
-  }
-  name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
-  token.name = name;
-  let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
-  console.log(number);
-  const body = {
-    "name": name,
-    "symbol": "ATLBC",
-    "description": "The loft business club is a virtual estate project based on the Solana blockchain offering realistic and customizable flat on the metaverse. To gain access to one of the 5555 Lofts, you need to own an Access Cards. There are three types of them : the Standard (4400 pieces), the Premium (1100 pieces) and the Exclusive (55 pieces). The rarer the Access Card, the bigger the apartment and the amount of special features.",
-    "seller_fee_basis_points": 500,
-    "image": image,
-    "external_url": "https://loftsclub.com/",
-    "edition": number,
-    "attributes": [{ "trait_type": "access", "value": type }],
-    "collection": { "name": "TLBC Access Cards", "family": "Access Cards" },
-    "properties": {
-      "files": [{ "type": "image/jpeg", "uri": image }],
-      "creators": [{ "address": "4KfCr7GQewMMc2xZGz8YSpWJy6PkJdTWhzEAsRboVxe6", "share": 100 }]
-    }
+  let wave;
+  let token;
+  try {
+  const currentDate = new Date().getTime();
 
-  };
-  const options = {
-    pinataMetadata: {
-      name: name,
-    },
-    pinataOptions: {
-      cidVersion: 0
+  const waveTransactionResults = await session.withTransaction(async () => { 
+    const waveCollection = client.db('myFirstDatabase').collection('waveschemas');
+    const tokenCollection = client.db('myFirstDatabase').collection('upgrademodels');
+    const Collection = client.db('myFirstDatabase').collection('usermodels');
+
+    wave = await waveCollection.findOne({ 
+      start: { $lte: currentDate },
+      end: { $gte: currentDate } });
+    
+
+    console.log(wave);
+    if (!wave)
+      throw new Error("no wave found");    
+    token = await tokenCollection.findOne({ 
+      account });
+    if (token)
+      throw new Error("token upgrade already in progress, please wait for the upgrade to finish or choose another token");
+    const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
+    console.log("pre upgrade  : " + tokenmeta.data.data);
+    if (!tokenmeta.data.data.name.indexOf("Exclusive", 0))
+      throw new Error("Cannot upgrade Exclusive tokens yet, please choose another tier");
+    if (!tokenmeta.data.data.name.indexOf("Premium", 0)) {
+      type = "Exclusive ";
+      if (wave.premLimit == 0)
+        throw new Error("Not more Premium upgrades available in current wave");
+      if (wave.premPrice * 1e6 > user.earned || typeof user.earned === 'undefined')
+        throw new Error("Not enough tokens");
+    image = "https://tlbc.mypinata.cloud/ipfs/QmVL85hZGvCXq9C1EfqiW3fJJJp9azyJNR2zEN5iacAZoW";
+            
+      
+      user = await Collection.updateOne({wallet : wallet}, 
+        { $set: {earned : (user.earned - wave.premPrice * 1e6), burned : (user.burned + wave.premPrice)}});
+
+      wave = await waveCollection.updateOne({ 
+        start: { $lte: currentDate },
+        end: { $gte: currentDate } }, { $set : {premLimit : --(wave.premLimit)}});
+
+   }
+    else if (!tokenmeta.data.data.name.indexOf("Standard", 0)) {
+      type = "Premium ";
+      if (wave.standLimit == 0)
+        throw new Error("Not more Standard upgrades available in current wave");
+      if (wave.standPrice * 1e6 > user.earned || typeof user.earned === 'undefined')
+        throw new Error("Not enough tokens");
+      image = "https://tlbc.mypinata.cloud/ipfs/QmSFnDDPn8B47R3L15iQL5aTpBBJvvEGo4LB4dQwcZEZ79";
+              
+        
+      user = await Collection.updateOne({wallet : wallet}, 
+          { $set: {earned : (user.earned - wave.standPrice * 1e6), burned : (user.burned + wave.standPrice)}});
+      wave = await waveCollection.updateOne({ 
+          start: { $lte: currentDate },
+          end: { $gte: currentDate } }, { $set : {standLimit : --(wave.standLimit)}});
+        console.log(wave);
     }
-  };
-  const result = await pinata.pinJSONToIPFS(body, options)
-  token.uri = "https://tlbc.mypinata.cloud/ipfs/" + result.IpfsHash;
-  console.log("user post upgrade : " + user);
-  await token.save();
-  await user.save();
-  createJson(number, account, token);
-  console.log(result);
-};
+    name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
+    let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
+    console.log(number);
+    const body = {
+      "name": name,
+      "symbol": "ATLBC",
+      "description": "The loft business club is a virtual estate project based on the Solana blockchain offering realistic and customizable flat on the metaverse. To gain access to one of the 5555 Lofts, you need to own an Access Cards. There are three types of them : the Standard (4400 pieces), the Premium (1100 pieces) and the Exclusive (55 pieces). The rarer the Access Card, the bigger the apartment and the amount of special features.",
+      "seller_fee_basis_points": 500,
+      "image": image,
+      "external_url": "https://loftsclub.com/",
+      "edition": number,
+      "attributes": [{ "trait_type": "access", "value": type }],
+      "collection": { "name": "TLBC Access Cards", "family": "Access Cards" },
+      "properties": {
+        "files": [{ "type": "image/jpeg", "uri": image }],
+        "creators": [{ "address": "4KfCr7GQewMMc2xZGz8YSpWJy6PkJdTWhzEAsRboVxe6", "share": 100 }]
+      }
+
+    };
+    const options = {
+      pinataMetadata: {
+        name: name,
+      },
+      pinataOptions: {
+        cidVersion: 0
+      }
+    };
+    const result = await pinata.pinJSONToIPFS(body, options)
+    if (!token)
+    {
+      token = await tokenCollection.insertOne({
+        wallet : wallet,
+        account : account,
+        uri : "https://tlbc.mypinata.cloud/ipfs/" + result.IpfsHash,
+        name : name
+      })
+    }
+    console.log("user post upgrade : " + user);
+    console.log("token: " + token);
+    console.log("wave: " + wave);
+    createJson(number, name, "https://tlbc.mypinata.cloud/ipfs/" + result.IpfsHash, account, token, tokenCollection);
+    console.log(result);
+    }, transactionOptions);
+  }
+  catch (err) {
+    // await session.abortTransaction()
+    throw err;
+  }
+}
 
 //function that takes a name and uri, creates a json file with said name and uri and a field for symbol and creator
-const createJson = async(number, account, token) => {
+const createJson = async(number, name, uri, account, token, tokenCollection) => {
+  console.log(token);
   const final_json = {
-    "name": token.name,
+    "name": name,
     "symbol": "ATLBC",
-    "uri": token.uri,
+    "uri": uri,
     "seller_fee_basis_points": 500,
     "creators": [
         {
@@ -216,27 +302,28 @@ const createJson = async(number, account, token) => {
       }
     ]
 }
+console.log(final_json);
 const file_name = number + ".json";
-token.file = file_name;
-await token.save();
+token = await tokenCollection.updateOne({ 
+  account : account}, { $set : {file : file_name}});
 fs.writeFile('../json/' + file_name, JSON.stringify(final_json), function (err) {
   if (err) throw err;
   console.log('Saved!');
 });
 await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
 console.log(final_json);
-verifyUpgrade(account, token);
+verifyUpgrade(account, token, name, file_name, tokenCollection);
 }
 
-const verifyUpgrade = async(account, token) => {
+const verifyUpgrade = async(account, token, name, file, tokenCollection) => {
   sleep(60 * 1000);
   let mintPubkey = new web3.PublicKey(account);
   let tokenmetaPubkey = await Metadata.getPDA(mintPubkey);
   const tokenmeta = await Metadata.load(connection, tokenmetaPubkey);
-  console.log(tokenmeta.data.data);
-  if (tokenmeta.data.data.name == token.name)
+  console.log("post upgrade: " + tokenmeta.data.data);
+  if (tokenmeta.data.data.name == name)
   {
-    await Upgrade.deleteOne({
+    await tokenCollection.deleteOne({
       account : account
     });
     console.log("upgrade done for token : " + account);
@@ -244,6 +331,7 @@ const verifyUpgrade = async(account, token) => {
   else
   {
     console.log("awaiting upgrade for token : " + account);
-    await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${token.file} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+    await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+    verifyUpgrade(account, token, name, file, tokenCollection);
   }
 }
