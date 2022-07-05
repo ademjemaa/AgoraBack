@@ -7,8 +7,9 @@ import * as web3 from "@solana/web3.js";
 import { createRequire } from "module";
 import { exec } from "child_process";
 import { token } from "@project-serum/anchor/dist/cjs/utils/index.js";
+import mongoose from "mongoose";
+
 import wave from "../models/wave.js";
-import { client } from "../index.js";
 const require = createRequire(import.meta.url);
 var fs = require('fs');
 const { MongoClient } = require('mongodb');
@@ -43,6 +44,8 @@ const connection = new web3.Connection(
   "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/",
   "confirmed"
 );
+
+let client = await MongoClient.connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
 
 //a function that creates a new wave objects with the body of the request and returns the new wave in the response
 export const CreateWave = async (req, res) => {
@@ -174,6 +177,7 @@ const ChangeMetadata = async (account, user, session) => {
   let image;
   let wave;
   let token;
+
   try {
   const currentDate = new Date().getTime();
 
@@ -186,7 +190,6 @@ const ChangeMetadata = async (account, user, session) => {
       start: { $lte: currentDate },
       end: { $gte: currentDate } });
     
-
     console.log(wave);
     if (!wave)
       throw new Error("no wave found");    
@@ -231,6 +234,7 @@ const ChangeMetadata = async (account, user, session) => {
           end: { $gte: currentDate } }, { $set : {standLimit : --(wave.standLimit)}});
         console.log(wave);
     }
+
     name = type + tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("access", 0));
     let number = parseInt(tokenmeta.data.data.name.substring(tokenmeta.data.data.name.indexOf("#", 0) + 1))
     console.log(number);

@@ -34,14 +34,10 @@ const CONNECTION_URL =
 
 const PORT = process.env.PORT;
 
-// export var client = mongoose
-//   .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-//   .then(() =>
-//     app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`))
-//   )
-//   .catch(() => console.log("launch error, probably ip address on mongo db"));
+export var client = await mongoose
+  .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() =>
+    app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`))
+  )
+  .catch(() => console.log("launch error, probably ip address on mongo db"));
 
-export var client = await MongoClient.connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-app.listen(PORT, () => console.log(`SERVER RUNNING ON PORT: ${PORT}`));
-
-// mongoose.set("useFindAndModify", false);
