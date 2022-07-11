@@ -3,6 +3,7 @@ import User from "../models/user.js";
 import Upgrade from "../models/upgrade.js";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import Wave from "../models/wave.js";
+import ico from "../models/ICO.js";
 import * as web3 from "@solana/web3.js";
 import { createRequire } from "module";
 import { exec } from "child_process";
@@ -17,7 +18,7 @@ const bcrypt = require('bcrypt');
 const pinataSDK = require('@pinata/sdk');
 const pinata = pinataSDK('dd9892506546216c7b0b', 'ca789c941b9b82210d948d38a611dd79ec69bde59650d08acef0f3974934fcbf');
 const CONNECTION_URL =
-  "mongodb+srv://Daraos:xSJbu0kArQHSApj5@cluster0.tgecm.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+  "mongodb://localhost:27017,localhost:27018,localhost:27019?replicaSet=rs";
   const options = { useNewUrlParser: true, replicaSet: 'rs' };
 
 const passwordInPlaintext = ')4yga#A^4<`p<j]m';
@@ -53,14 +54,14 @@ export const CreateWave = async (req, res) => {
     let match = false;
     let wave;
     const { start, end, premLimit, standLimit, premPrice, standPrice, password } = req.body;
-
+    const waveCollection = client.db('test').collection('waveschemas');
     const pass = await bcrypt.hash(password, 10);
     const isPasswordMatching = await bcrypt.compare(password, hash);
     if (isPasswordMatching)
       match = true;
     if (match)
     {
-        wave = await Wave.create({
+        wave = await waveCollection.create({
         start,
         end,
         premLimit,
@@ -68,7 +69,32 @@ export const CreateWave = async (req, res) => {
         premPrice,
         standPrice
       });
-    res.send(wave);
+    res.status(200).send(wave);
+    }
+    else
+      throw new Error("password doesnt match");
+  } catch (error) {
+    console.error(error);
+    res.status(409).json({ message: error.message });
+  }
+}
+
+export const deleteWave = async (req, res) => {
+  try {
+    let match = false;
+    let wave;
+    const { id, password } = req.body;
+    const waveCollection = client.db('test').collection('waveschemas');
+    const pass = await bcrypt.hash(password, 10);
+    const isPasswordMatching = await bcrypt.compare(password, hash);
+    if (isPasswordMatching)
+      match = true;
+    if (match)
+    {
+        wave = await Wave.deleteOne({
+        id : id
+      });
+    res.status(200).send("deleted wave");
     }
     else
       throw new Error("password doesnt match");
@@ -81,16 +107,35 @@ export const CreateWave = async (req, res) => {
 (async () => {
 })();
 
-export const getWaveStats = async (req, res) => {
+export const getWaves= async (req, res) => {
+  let currentDate = new Date().getTime();
+  var wave;
+  let cur;
+  
+  //get wave where currentDate is bigger than start and smaller than end
+   
+    wave = await Wave.find({
+    });
+  if (wave) {
+
+    console.log(wave);
+    res.status(200).send(wave); //for testing purposes
+  
+  } else {
+    res.status(400).send("No wave found");
+  }
+
+}
+
+export const getFakeWaveStats = async (req, res) => {
   let currentDate = new Date().getTime();
   var wave;
   const session = await client.startSession();
-  
+
   try {
   //get wave where currentDate is bigger than start and smaller than end
   const transactionResults = await session.withTransaction(async () => { 
-            
-    const waveCollection = client.db('myFirstDatabase').collection('waveschemas');
+    const waveCollection = client.db('test').collection('waveschemas');
 
    
     wave = await waveCollection.findOne({
@@ -98,9 +143,7 @@ export const getWaveStats = async (req, res) => {
       end: { $gte: currentDate } 
     });
     }, transactionOptions);
-    console.log(transactionResults);
   if (wave) {
-    console.log(wave);
     let stats = {
       premLimit: wave.premLimit,
       standLimit: wave.standLimit,
@@ -116,9 +159,37 @@ export const getWaveStats = async (req, res) => {
   } else {
     res.status(400).send("No wave found");
   }
-} finally {
-  session.endSession(); 
+  } finally {
+    session.endSession(); 
+  }
 }
+
+export const getWaveStats = async (req, res) => {
+  let currentDate = new Date().getTime();
+  var wave;
+  
+  //get wave where currentDate is bigger than start and smaller than end
+    wave = await Wave.findOne({
+          start: { $lte: currentDate },
+      end: { $gte: currentDate } 
+    });
+  if (wave) {
+    console.log(wave);
+    let stats = {
+      premLimit: wave.premLimit,
+      standLimit: wave.standLimit,
+      premPrice: wave.premPrice,
+      standPrice: wave.standPrice,
+      start: wave.start,
+      end: wave.end
+    };
+
+    res.status(200).send(stats); 
+
+  
+  } else {
+    res.status(400).send("No wave found");
+  }
 }
 
 const execPromise = (command) =>
@@ -136,12 +207,12 @@ export const UpgradeNFT = async (req, res) => {
   const { wallet } = req.params;
   const { account } = req.body;
   let user;
-  const tokenCollection = await client.db('myFirstDatabase').collection('upgrademodels');
+  const tokenCollection = await client.db('test').collection('upgrademodels');
   const tokens = await tokenCollection.deleteMany({});
   const session = await client.startSession();
   try {
     const transactionResults = await session.withTransaction(async () => { 
-      const Collection = client.db('myFirstDatabase').collection('usermodels');
+      const Collection = client.db('test').collection('usermodels');
       user = await Collection.findOne({ wallet });
       }, transactionOptions);
     console.log(user);
@@ -182,9 +253,9 @@ const ChangeMetadata = async (account, user, session) => {
   const currentDate = new Date().getTime();
 
   const waveTransactionResults = await session.withTransaction(async () => { 
-    const waveCollection = client.db('myFirstDatabase').collection('waveschemas');
-    const tokenCollection = client.db('myFirstDatabase').collection('upgrademodels');
-    const Collection = client.db('myFirstDatabase').collection('usermodels');
+    const waveCollection = client.db('test').collection('waveschemas');
+    const tokenCollection = client.db('test').collection('upgrademodels');
+    const Collection = client.db('test').collection('usermodels');
 
     wave = await waveCollection.findOne({ 
       start: { $lte: currentDate },
@@ -287,36 +358,42 @@ const ChangeMetadata = async (account, user, session) => {
 
 //function that takes a name and uri, creates a json file with said name and uri and a field for symbol and creator
 const createJson = async(number, name, uri, account, token, tokenCollection) => {
-  console.log(token);
-  const final_json = {
-    "name": name,
-    "symbol": "ATLBC",
-    "uri": uri,
-    "seller_fee_basis_points": 500,
-    "creators": [
+  try {
+    console.log(token);
+    const final_json = {
+      "name": name,
+      "symbol": "ATLBC",
+      "uri": uri,
+      "seller_fee_basis_points": 500,
+      "creators": [
+          {
+          "address": "EXBwPeWBeJc1hkupb3cCjnQ7Tr3Q4DN9BF2WheQPFwci",
+          "verified": true,
+          "share": 0
+        },
         {
-        "address": "EXBwPeWBeJc1hkupb3cCjnQ7Tr3Q4DN9BF2WheQPFwci",
-        "verified": true,
-        "share": 0
-      },
-      {
-        "address": "4KfCr7GQewMMc2xZGz8YSpWJy6PkJdTWhzEAsRboVxe6",
-        "verified": false,
-        "share": 100
-      }
-    ]
-}
-console.log(final_json);
-const file_name = number + ".json";
-token = await tokenCollection.updateOne({ 
-  account : account}, { $set : {file : file_name}});
-fs.writeFile('../json/' + file_name, JSON.stringify(final_json), function (err) {
-  if (err) throw err;
-  console.log('Saved!');
-});
-await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
-console.log(final_json);
-verifyUpgrade(account, token, name, file_name, tokenCollection);
+          "address": "4KfCr7GQewMMc2xZGz8YSpWJy6PkJdTWhzEAsRboVxe6",
+          "verified": false,
+          "share": 100
+        }
+      ]
+  }
+  console.log(final_json);
+  const file_name = number + ".json";
+  token = await tokenCollection.updateOne({ 
+    account : account}, { $set : {file : file_name}});
+  fs.writeFile('../json/' + file_name, JSON.stringify(final_json), function (err) {
+    if (err) throw err;
+    console.log('Saved!');
+  });
+  await execPromise(`${process.env.METABOSS} update data --account ${account} --keypair ${process.env.KEY_PATH} --new-data-file ../json/${file_name} -r https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/ -T 9000`);
+  console.log(final_json);
+  verifyUpgrade(account, token, name, file_name, tokenCollection);
+  }
+  catch (err) 
+  {
+    throw (err);
+  }
 }
 
 const verifyUpgrade = async(account, token, name, file, tokenCollection) => {

@@ -4,6 +4,7 @@ import { programs } from "@metaplex/js";
 import axios from "axios";
 
 import User from "../models/user.js";
+import Wave from "../models/wave.js";
 
 const connection = new web3.Connection(
   "https://shy-winter-lake.solana-mainnet.quiknode.pro/e9240b3d6d62ddc50f5faaa87ffacdfe055435e1/",
@@ -17,7 +18,7 @@ const NFTImageDict = {
 };
 const NFTWeightDict = {
   Standard: 1,
-  Premium: 3.4,
+  Premium: 3.349,
   Exclusive: 33.334,
 };
 
@@ -27,6 +28,9 @@ const {
 
 let tokenreward = 347.22;
 
+(async () => {
+
+})();
 
 export const getTrans = async (req, res) => {
   try {
@@ -77,6 +81,7 @@ export const getVaultTokens = async (req, res) => {
       }
     }
     user.gems.gemCount = final_tokens.length;
+    await user.save();
     res.status(200).send(final_tokens);
   } catch (error) {
     console.error(error);
