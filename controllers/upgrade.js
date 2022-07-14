@@ -61,7 +61,7 @@ export const CreateWave = async (req, res) => {
       match = true;
     if (match)
     {
-        wave = await waveCollection.create({
+        wave = await Wave.create({
         start,
         end,
         premLimit,

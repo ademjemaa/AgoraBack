@@ -11,7 +11,7 @@ const router = express.Router();
 router.post("/:wallet", UpgradeNFT);
 router.get("/wave", getWaveStats);
 router.get("/allwaves", getWaves);
-router.post("/create", CreateWave);
+router.post("/wave/create", CreateWave);
 router.delete("/delete", deleteWave);
 
 
