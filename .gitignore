@@ -2,4 +2,4 @@ node_modules
 .history
 yarn.lock
 .env
-./data
+/data/*
