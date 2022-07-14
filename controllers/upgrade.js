@@ -108,9 +108,7 @@ export const deleteWave = async (req, res) => {
 })();
 
 export const getWaves= async (req, res) => {
-  let currentDate = new Date().getTime();
   var wave;
-  let cur;
   
   //get wave where currentDate is bigger than start and smaller than end
    
@@ -125,43 +123,6 @@ export const getWaves= async (req, res) => {
     res.status(400).send("No wave found");
   }
 
-}
-
-export const getFakeWaveStats = async (req, res) => {
-  let currentDate = new Date().getTime();
-  var wave;
-  const session = await client.startSession();
-
-  try {
-  //get wave where currentDate is bigger than start and smaller than end
-  const transactionResults = await session.withTransaction(async () => { 
-    const waveCollection = client.db('test').collection('waveschemas');
-
-   
-    wave = await waveCollection.findOne({
-          start: { $lte: currentDate },
-      end: { $gte: currentDate } 
-    });
-    }, transactionOptions);
-  if (wave) {
-    let stats = {
-      premLimit: wave.premLimit,
-      standLimit: wave.standLimit,
-      premPrice: wave.premPrice,
-      standPrice: wave.standPrice,
-      start: wave.start,
-      end: wave.end
-    };
-
-    res.status(200).send(stats);
-    session.endSession();
-  
-  } else {
-    res.status(400).send("No wave found");
-  }
-  } finally {
-    session.endSession(); 
-  }
 }
 
 export const getWaveStats = async (req, res) => {
@@ -183,8 +144,8 @@ export const getWaveStats = async (req, res) => {
       start: wave.start,
       end: wave.end
     };
-
-    res.status(200).send(stats); 
+    res.status(400).send("No wave found");
+    // res.status(200).send(stats); testing
 
   
   } else {
